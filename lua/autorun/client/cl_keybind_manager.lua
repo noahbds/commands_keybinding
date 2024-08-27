@@ -1,5 +1,6 @@
 if SERVER then return end
 
+
 -- Ensure the XPGUI library is included
 hook.Add("Initialize", "LoadXPGUI", function()
     if not XPGUI then
@@ -35,7 +36,6 @@ local function isValidCommand(cmd)
     return string.match(cmd, "^[%w%+%-_%*/!%s]+$") ~= nil and string.match(cmd, "%S")
 end
 
--- Refresh the key bind list in the UI
 function RefreshKeyBindList()
     if not IsValid(frame) then return end
 
@@ -44,8 +44,8 @@ function RefreshKeyBindList()
     end
 
     frame.keyBindList = vgui.Create("XPListView", frame)
-    frame.keyBindList:SetPos(10, 180)
-    frame.keyBindList:SetSize(frame:GetWide() - 20, frame:GetTall() - 190)
+    frame.keyBindList:SetPos(10, 200)
+    frame.keyBindList:SetSize(frame:GetWide(), frame:GetTall() - 190)
     frame.keyBindList:AddColumn("Command")
     frame.keyBindList:AddColumn("Key")
 
@@ -894,6 +894,45 @@ end
 
 -- Open configuration menu
 local function openConfigMenu()
+    if not XPGUI then
+        -- Create a DFrame to notify the user that XPGUI is not installed
+        local notifyFrame = vgui.Create("DFrame")
+        notifyFrame:SetTitle("[Commands Binding] XPGUI Not Installed")
+        notifyFrame:SetSize(400, 200)
+        notifyFrame:Center()
+        notifyFrame:MakePopup()
+        surface.PlaySound("buttons/button10.wav")
+
+        -- Add an icon to the frame
+        local icon = vgui.Create("DImage", notifyFrame)
+        icon:SetImage("icon16/error.png") -- Assuming you have this icon in your materials
+        icon:SetSize(32, 32)
+        icon:SetPos(10, 30)
+
+        local label = vgui.Create("DLabel", notifyFrame)
+        label:SetText("XPGUI is not installed. Please install it from the following link:")
+        label:SizeToContents()
+        label:SetPos(50, 40)
+
+        local link = vgui.Create("DLabelURL", notifyFrame)
+        link:SetText("Link To the Addon")
+        link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739")
+        link:SizeToContents()
+        link:SetWide(300) -- Ajustez la largeur pour éviter la coupure
+        link:SetPos(50, 60)
+
+        -- Add a button to close the frame
+        local closeButton = vgui.Create("DButton", notifyFrame)
+        closeButton:SetText("Close")
+        closeButton:SetSize(100, 30)
+        closeButton:SetPos(150, 150)
+        closeButton.DoClick = function()
+            notifyFrame:Close()
+        end
+
+        return
+    end
+
     if IsValid(frame) then return end -- Prevent opening more than one instance
 
     frame = vgui.Create("XPFrame")
@@ -915,23 +954,32 @@ local function openConfigMenu()
     commandEntry:SetPos(100, 35)
     commandEntry:SetSize(frame:GetWide() - 110, 25)
 
+    local parameterLabel = vgui.Create("DLabel", frame)
+    parameterLabel:SetText("Parameter:")
+    parameterLabel:SetPos(10, 70) -- Positionnez-le sous l'entrée de texte de commande
+    parameterLabel:SizeToContents()
+
+    local parameterEntry = vgui.Create("XPTextEntry", frame)
+    parameterEntry:SetPos(100, 65) -- Positionnez-le sous l'entrée de texte de commande
+    parameterEntry:SetSize(frame:GetWide() - 110, 25)
+
     local keyBinderLabel = vgui.Create("DLabel", frame)
     keyBinderLabel:SetText("Key Bind:")
-    keyBinderLabel:SetPos(10, 80)
+    keyBinderLabel:SetPos(10, 100)
     keyBinderLabel:SizeToContents()
 
     local keyBinder = vgui.Create("DBinder", frame)
-    keyBinder:SetPos(100, 75)
+    keyBinder:SetPos(100, 95)
     keyBinder:SetSize(frame:GetWide() - 110, 50)
 
     local saveButton = vgui.Create("XPButton", frame)
     saveButton:SetText("Save")
-    saveButton:SetPos((frame:GetWide() - 100) / 2, 140)
+    saveButton:SetPos((frame:GetWide() - 100) / 2, 160)
     saveButton:SetSize(100, 30)
     saveButton:SetEnabled(false)
 
     local statusPanel = vgui.Create("DPanel", frame)
-    statusPanel:SetPos(10, 180)
+    statusPanel:SetPos(10, 200)
     statusPanel:SetSize(frame:GetWide() - 20, 25)
     statusPanel:SetBackgroundColor(Color(255, 0, 0))
     statusPanel:SetVisible(false)
@@ -944,9 +992,28 @@ local function openConfigMenu()
 
     commandEntry.OnChange = function()
         local command = commandEntry:GetValue()
+
         if IsValid(SuggestionsList) then
             SuggestionsList:Remove()
         end
+
+        if not commandEntry:IsEditing() or command == "" then
+            statusPanel:SetVisible(false)
+            saveButton:SetEnabled(false)
+            return
+        end
+
+        if isValidCommand(command) then
+            statusPanel:SetVisible(false)
+            saveButton:SetEnabled(true)
+        else
+            statusLabel:SetText(
+                "Invalid command. Only alphanumeric characters, spaces (if not alone), and + - _ * / ! are allowed.")
+            statusPanel:SetVisible(true)
+            statusPanel:MoveToFront()
+            saveButton:SetEnabled(false)
+        end
+
         if command == "" then
             return
         end
@@ -965,8 +1032,6 @@ local function openConfigMenu()
             end
         end
     end
-
-
 
     saveButton.DoClick = function()
         local command = commandEntry:GetValue()
@@ -990,24 +1055,44 @@ local function openConfigMenu()
     end
 
     function frame:PerformLayout()
+        if IsValid(commandLabel) then
+            commandLabel:SetPos(10, 40)
+        end
+
         if IsValid(commandEntry) then
+            commandEntry:SetPos(100, 35)
             commandEntry:SetSize(self:GetWide() - 110, 25)
         end
 
+        if IsValid(parameterLabel) then
+            parameterLabel:SetPos(10, 70)
+        end
+
+        if IsValid(parameterEntry) then
+            parameterEntry:SetPos(100, 65)
+            parameterEntry:SetSize(self:GetWide() - 110, 25)
+        end
+
+        if IsValid(keyBinderLabel) then
+            keyBinderLabel:SetPos(10, 100)
+        end
+
         if IsValid(keyBinder) then
+            keyBinder:SetPos(100, 95)
             keyBinder:SetSize(self:GetWide() - 110, 50)
         end
 
         if IsValid(saveButton) then
-            saveButton:SetPos((self:GetWide() - 100) / 2, 140)
+            saveButton:SetPos((self:GetWide() - 100) / 2, 160)
         end
 
         if IsValid(statusPanel) then
+            statusPanel:SetPos(10, 200)
             statusPanel:SetSize(self:GetWide() - 20, 25)
         end
 
         if IsValid(frame.keyBindList) then
-            frame.keyBindList:SetSize(self:GetWide() - 20, self:GetTall() - 190)
+            frame.keyBindList:SetSize(self:GetWide() - 20, self:GetTall() - 230)
         end
     end
 
@@ -1015,6 +1100,13 @@ local function openConfigMenu()
 end
 
 concommand.Add("open_keybind_manager", openConfigMenu)
+
+if not XPGUI then
+    hook.Add("Initialize", "OpenConfigMenuOnStart", function()
+        -- Open the configuration menu
+        openConfigMenu()
+    end)
+end
 
 -- Check for key press
 hook.Add("Think", "KeyBindManager_Think", function()
@@ -1030,21 +1122,6 @@ hook.Add("Think", "KeyBindManager_Think", function()
         end
     end
 end)
-
-local function copyToClipboard(text)
-    SetClipboardText(text)
-    notification.AddLegacy("Position copied to clipboard!", NOTIFY_HINT, 5)
-    surface.PlaySound("buttons/button15.wav")
-end
-
-local function getPlayerPosition()
-    local ply = LocalPlayer()
-    if not IsValid(ply) then return end
-    local pos = ply:GetPos()
-    local ang = ply:EyeAngles()
-    local posString = string.format("setpos %f %f %f;setang %f %f %f", pos.x, pos.y, pos.z, ang.p, ang.y, ang.r)
-    copyToClipboard(posString)
-end
 
 hook.Add("Think", "CheckKeybinds", function()
     if TypingInTextEntry then return end
