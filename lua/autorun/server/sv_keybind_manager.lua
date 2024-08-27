@@ -21,20 +21,17 @@ end
 
 local keyBinds = loadKeyBinds()
 
--- Network message handler to update the key binds
 net.Receive("KeyBindManager_Update", function(len, ply)
     if ply:IsAdmin() then
         local command = net.ReadString()
         local key = net.ReadInt(32)
+        local parameter = net.ReadString()
         if key == 0 then
             keyBinds[command] = nil
         else
-            keyBinds[command] = key
+            keyBinds[command] = { key = key, parameter = parameter }
         end
         saveKeyBinds(keyBinds)
-        net.Start("KeyBindManager_Config")
-        net.WriteTable(keyBinds)
-        net.Send(ply)
     end
 end)
 
