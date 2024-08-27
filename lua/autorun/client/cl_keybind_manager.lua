@@ -9,12 +9,13 @@ hook.Add("Initialize", "LoadXPGUI", function()
 end)
 
 local function sendCommandToServer(command, parameter)
+    -- Retirer l'astérisque de la commande avant de l'envoyer au serveur
+    command = string.gsub(command, "%*$", "")
     net.Start("KeyBindManager_RunCommand")
     net.WriteString(command)
     net.WriteString(parameter or "")
     net.SendToServer()
 end
-
 local keyBinds = {}
 local keyPressStates = {}
 local frame
@@ -1024,10 +1025,15 @@ local function openConfigMenu()
                     showOverwriteConfirmation(command, key, existingCommand)
                     return
                 end
-                if existingData.parameter == parameter and existingCommand ~= command then
-                    showOverwriteConfirmation(command, key, existingCommand)
+                if existingData.parameter == parameter and existingCommand == command then
+                    statusLabel:SetText("A command with the same name and parameter already exists.")
+                    statusPanel:SetVisible(true)
                     return
                 end
+            end
+            -- Add an asterisk if a command with the same name exists but with a different parameter (to differentiate them)
+            if keyBinds[command] and keyBinds[command].parameter ~= parameter then
+                command = command .. "*"
             end
             keyBinds[command] = { key = key, parameter = parameter }
             net.Start("KeyBindManager_Update")
@@ -1103,17 +1109,19 @@ hook.Add("Think", "KeyBindManager_Think", function()
         if type(key) == "number" and input.IsKeyDown(key) then
             if not keyPressStates[key] then
                 keyPressStates[key] = true
+                -- Remove the asterisk from the command before executing it (if there is one)
+                local cleanCommand = string.gsub(command, "%*$", "")
                 if parameter and parameter ~= "" then
-                    if command == "sv_cheats" then
-                        sendCommandToServer(command, parameter)
+                    if cleanCommand == "sv_cheats" then
+                        sendCommandToServer(cleanCommand, parameter)
                     else
-                        RunConsoleCommand(command, parameter)
+                        RunConsoleCommand(cleanCommand, parameter)
                     end
                 else
-                    if command == "sv_cheats" then
-                        sendCommandToServer(command)
+                    if cleanCommand == "sv_cheats" then
+                        sendCommandToServer(cleanCommand)
                     else
-                        RunConsoleCommand(command)
+                        RunConsoleCommand(cleanCommand)
                     end
                 end
             end
