@@ -1103,17 +1103,9 @@ hook.Add("Think", "KeyBindManager_Think", function()
                 -- Remove the asterisk from the command before executing it (if there is one)
                 local cleanCommand = string.gsub(command, "%*$", "")
                 if parameter and parameter ~= "" then
-                    if cleanCommand == "sv_cheats" then
-                        sendCommandToServer(cleanCommand, parameter)
-                    else
-                        RunConsoleCommand(cleanCommand, parameter)
-                    end
+                    RunConsoleCommand(cleanCommand, parameter)
                 else
-                    if cleanCommand == "sv_cheats" then
-                        sendCommandToServer(cleanCommand)
-                    else
-                        RunConsoleCommand(cleanCommand)
-                    end
+                    RunConsoleCommand(cleanCommand)
                 end
             end
         else
