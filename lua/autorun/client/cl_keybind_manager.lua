@@ -1,7 +1,7 @@
 if SERVER then return end
 
 
--- Ensure the XPGUI library is included
+-- Ensure the XPGUI library is included (It's Workshop Library Addon)
 hook.Add("Initialize", "LoadXPGUI", function()
     if not XPGUI then
         include("xpgui/xpgui.lua")
@@ -9,18 +9,17 @@ hook.Add("Initialize", "LoadXPGUI", function()
 end)
 
 local function sendCommandToServer(command, parameter)
-    -- Retirer l'astérisque de la commande avant de l'envoyer au serveur
     command = string.gsub(command, "%*$", "")
     net.Start("KeyBindManager_RunCommand")
     net.WriteString(command)
     net.WriteString(parameter or "")
     net.SendToServer()
 end
+
 local keyBinds = {}
 local keyPressStates = {}
 local frame
 
--- Is true when the player is typing in a text entry
 TypingInTextEntry = false
 
 hook.Add("OnTextEntryGetFocus", "IsTyping", function()
@@ -32,7 +31,6 @@ hook.Add("OnTextEntryLoseFocus", "IsNotTyping", function()
 end)
 
 
--- Network message handler to receive the key bind configurations
 net.Receive("KeyBindManager_Config", function()
     keyBinds = net.ReadTable()
     if IsValid(frame) then
@@ -77,7 +75,6 @@ function RefreshKeyBindList()
     end
 end
 
--- Function to show an overwrite confirmation
 local function showOverwriteConfirmation(command, key, existingCommand)
     local confirmFrame = vgui.Create("XPFrame")
     confirmFrame:SetTitle("Overwrite Key Bind")
@@ -103,8 +100,8 @@ local function showOverwriteConfirmation(command, key, existingCommand)
     cancelButton:SetSize(80, 30)
 
     confirmButton.DoClick = function()
-        keyBinds[existingCommand] = nil -- Remove existing binding
-        keyBinds[command] = key         -- Add new binding
+        keyBinds[existingCommand] = nil
+        keyBinds[command] = key
         net.Start("KeyBindManager_Update")
         net.WriteString(existingCommand)
         net.WriteInt(0, 32)
@@ -122,7 +119,7 @@ local function showOverwriteConfirmation(command, key, existingCommand)
     end
 end
 
--- Yeah, I took all the commands from the wiki, I didn't know a better way to do this I suck at code ya know
+-- Yeah, I took all the commands from the wiki, I didn't know a better way to do this I suck at code ya know :p
 local function GetCommandSuggestions(command)
     local allCommands = {
         "+alt1", "+alt2", "+attack", "+attack2", "+attack3", "+back", "+break", "+camdistance", "+camin", "+cammousemove",
@@ -874,10 +871,8 @@ local function GetCommandSuggestions(command)
     end
 end
 
--- Open configuration menu
 local function openConfigMenu()
     if not XPGUI then
-        -- Create a DFrame to notify the user that XPGUI is not installed
         local notifyFrame = vgui.Create("DFrame")
         notifyFrame:SetTitle("[Commands Binding] XPGUI Not Installed")
         notifyFrame:SetSize(400, 200)
@@ -885,10 +880,8 @@ local function openConfigMenu()
         notifyFrame:MakePopup()
         surface.PlaySound("buttons/button10.wav")
 
-        -- Add an icon to the frame
         local icon = vgui.Create("DImage", notifyFrame)
-        icon:SetImage("icon16/error.png") -- Assuming you have this icon in your materials
-        icon:SetSize(32, 32)
+        icon:SetImage("icon16/error.png")
         icon:SetPos(10, 30)
 
         local label = vgui.Create("DLabel", notifyFrame)
@@ -898,12 +891,11 @@ local function openConfigMenu()
 
         local link = vgui.Create("DLabelURL", notifyFrame)
         link:SetText("Link To the Addon")
-        link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739")
+        link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739") -- Gmod Url Style Look awful but it works
         link:SizeToContents()
-        link:SetWide(300) -- Ajustez la largeur pour éviter la coupure
+        link:SetWide(300)
         link:SetPos(50, 60)
 
-        -- Add a button to close the frame
         local closeButton = vgui.Create("DButton", notifyFrame)
         closeButton:SetText("Close")
         closeButton:SetSize(100, 30)
@@ -915,7 +907,7 @@ local function openConfigMenu()
         return
     end
 
-    if IsValid(frame) then return end -- Prevent opening more than one instance
+    if IsValid(frame) then return end
 
     frame = vgui.Create("XPFrame")
     frame:SetTitle("Key Bind Manager")
@@ -923,7 +915,7 @@ local function openConfigMenu()
     frame:Center()
     frame:MakePopup()
 
-    frame.OnClose = function() -- Nullify the frame variable when closed
+    frame.OnClose = function()
         frame = nil
     end
 
@@ -938,11 +930,11 @@ local function openConfigMenu()
 
     local parameterLabel = vgui.Create("DLabel", frame)
     parameterLabel:SetText("Parameter:")
-    parameterLabel:SetPos(10, 70) -- Positionnez-le sous l'entrée de texte de commande
+    parameterLabel:SetPos(10, 70)
     parameterLabel:SizeToContents()
 
     local parameterEntry = vgui.Create("XPTextEntry", frame)
-    parameterEntry:SetPos(100, 65) -- Positionnez-le sous l'entrée de texte de commande
+    parameterEntry:SetPos(100, 65)
     parameterEntry:SetSize(frame:GetWide() - 110, 25)
 
     local keyBinderLabel = vgui.Create("DLabel", frame)
@@ -1096,7 +1088,6 @@ concommand.Add("open_keybind_manager", openConfigMenu)
 
 if not XPGUI then
     hook.Add("Initialize", "OpenConfigMenuOnStart", function()
-        -- Open the configuration menu
         openConfigMenu()
     end)
 end
