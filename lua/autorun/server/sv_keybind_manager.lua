@@ -26,12 +26,31 @@ net.Receive("KeyBindManager_Update", function(len, ply)
         local command = net.ReadString()
         local key = net.ReadInt(32)
         local parameter = net.ReadString()
+
+        -- Check if the command already exists
         if key == 0 then
+            -- Remove the specific command
             keyBinds[command] = nil
         else
-            keyBinds[command] = { key = key, parameter = parameter }
+            -- Add or update the command
+            if keyBinds[command] then
+                -- Command exists, check for numbered versions
+                local baseCommand = command
+                local suffix = 1
+                while keyBinds[command] do
+                    command = baseCommand .. tostring(suffix)
+                    suffix = suffix + 1
+                end
+                keyBinds[command] = { key = key, parameter = parameter }
+            else
+                keyBinds[command] = { key = key, parameter = parameter }
+            end
         end
         saveKeyBinds(keyBinds)
+        -- Notify clients to refresh their key bind list
+        net.Start("KeyBindManager_Config")
+        net.WriteTable(keyBinds)
+        net.Broadcast()
     end
 end)
 

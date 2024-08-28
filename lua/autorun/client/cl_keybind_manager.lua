@@ -51,21 +51,6 @@ function RefreshKeyBindList()
         if type(data) == "table" then
             local key = data.key
             local parameter = data.parameter
-            local line = frame.keyBindList:AddLine(command, parameter, input.GetKeyName(key))
-            line.key = key
-            line.command = command
-            line.parameter = parameter
-        else
-            print("Invalid data for command:", command)
-        end
-    end
-
-    frame.keyBindList:Clear()
-
-    for command, data in pairs(keyBinds) do
-        if type(data) == "table" then
-            local key = data.key
-            local parameter = data.parameter
             local displayCommand = string.gsub(command, "%d*$", "") -- Retirer le suffixe numérique pour l'affichage
             local line = frame.keyBindList:AddLine(displayCommand, parameter, input.GetKeyName(key))
             line.key = key
@@ -89,6 +74,12 @@ function RefreshKeyBindList()
         menu:Open()
     end
 end
+
+-- Listen for updates from the server to refresh the key bind list
+net.Receive("KeyBindManager_Config", function()
+    keyBinds = net.ReadTable()
+    RefreshKeyBindList()
+end)
 
 local function showOverwriteConfirmation(command, key, parameter, existingCommand)
     local confirmFrame = vgui.Create("XPFrame")
