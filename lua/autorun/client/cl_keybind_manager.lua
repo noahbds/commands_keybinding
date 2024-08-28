@@ -51,7 +51,7 @@ function RefreshKeyBindList()
         if type(data) == "table" then
             local key = data.key
             local parameter = data.parameter
-            local displayCommand = string.gsub(command, "%d*$", "") -- Retirer le suffixe numérique pour l'affichage
+            local displayCommand = string.gsub(command, "%d*$", "")
             local line = frame.keyBindList:AddLine(displayCommand, parameter, input.GetKeyName(key))
             line.key = key
             line.command = command
@@ -107,14 +107,12 @@ local function showOverwriteConfirmation(command, key, parameter, existingComman
 
     confirmButton.DoClick = function()
         if existingCommand and command and key then
-            -- Only remove the exact existing command
             keyBinds[existingCommand] = nil
-            -- Add the new command with its key and parameter
             keyBinds[command] = { key = key, parameter = parameter }
 
             net.Start("KeyBindManager_Update")
             net.WriteString(existingCommand)
-            net.WriteInt(0, 32) -- Clear the existing command on server
+            net.WriteInt(0, 32)
             net.SendToServer()
 
             net.Start("KeyBindManager_Update")
@@ -995,20 +993,6 @@ local function openConfigMenu()
             return
         end
 
-        if isValidCommand(command) then
-            statusPanel:SetVisible(false)
-            saveButton:SetEnabled(true)
-        else
-            statusLabel:SetText(
-                "Invalid command. Only alphanumeric characters, spaces (if not alone), and + - _ * / ! are allowed.")
-            statusPanel:SetVisible(true)
-            statusPanel:MoveToFront()
-            saveButton:SetEnabled(false)
-        end
-
-        if command == "" then
-            return
-        end
         local suggestions = GetCommandSuggestions(command)
         if #suggestions > 0 then
             SuggestionsList = vgui.Create("XPListView", frame)
@@ -1022,6 +1006,44 @@ local function openConfigMenu()
                 commandEntry:SetText(line:GetColumnText(1))
                 SuggestionsList:Remove()
             end
+        end
+
+        if isValidCommand(command) then
+            if IsConCommandBlocked(command) then
+                SuggestionsList:Remove()
+
+                local errorFrame = vgui.Create("XPFrame")
+                errorFrame:SetTitle("Error")
+                errorFrame:SetSize(300, 100)
+                errorFrame:Center()
+                errorFrame:MakePopup()
+
+                local errorLabel = vgui.Create("DLabel", errorFrame)
+                errorLabel:SetText("This Command is Blacklisted.")
+                errorLabel:Dock(FILL)
+                errorLabel:SetContentAlignment(5)
+                errorLabel:SetTextColor(Color(255, 0, 0))
+
+                surface.PlaySound("common/warning.wav")
+
+                commandEntry:SetText("")
+
+                statusPanel:SetVisible(false)
+                saveButton:SetEnabled(false)
+            else
+                statusPanel:SetVisible(false)
+                saveButton:SetEnabled(true)
+            end
+        else
+            statusLabel:SetText(
+                "Invalid command. Only alphanumeric characters, spaces (if not alone), and + - _ * / ! are allowed.")
+            statusPanel:SetVisible(true)
+            statusPanel:MoveToFront()
+            saveButton:SetEnabled(false)
+        end
+
+        if command == "" then
+            return
         end
     end
 
