@@ -1,7 +1,7 @@
 util.AddNetworkString("KeyBindManager_Config")
 util.AddNetworkString("KeyBindManager_Update")
 
-local keyBindFile = "keybind_manager/keybinds.json"
+local keyBindFile = "keybind_commands/keybinds.json"
 
 -- Load the key binds from the file
 local function loadKeyBinds()
@@ -15,7 +15,7 @@ end
 
 -- Save the key binds to the file
 local function saveKeyBinds(keyBinds)
-    file.CreateDir("keybind_manager")
+    file.CreateDir("keybind_commands")
     file.Write(keyBindFile, util.TableToJSON(keyBinds))
 end
 

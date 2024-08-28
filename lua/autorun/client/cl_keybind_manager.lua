@@ -8,14 +8,6 @@ hook.Add("Initialize", "LoadXPGUI", function()
     end
 end)
 
-local function sendCommandToServer(command, parameter)
-    command = string.gsub(command, "%*$", "")
-    net.Start("KeyBindManager_RunCommand")
-    net.WriteString(command)
-    net.WriteString(parameter or "")
-    net.SendToServer()
-end
-
 local keyBinds = {}
 local keyPressStates = {}
 local frame
@@ -50,17 +42,40 @@ function RefreshKeyBindList()
     frame.keyBindList = vgui.Create("XPListView", frame)
     frame.keyBindList:SetPos(10, 200)
     frame.keyBindList:SetSize(frame:GetWide(), frame:GetTall() - 190)
+
     frame.keyBindList:AddColumn("Command")
     frame.keyBindList:AddColumn("Parameter")
     frame.keyBindList:AddColumn("Key")
+
     for command, data in pairs(keyBinds) do
-        local key = data.key
-        local parameter = data.parameter
-        local line = frame.keyBindList:AddLine(command, parameter, input.GetKeyName(key))
-        line.key = key
-        line.command = command
-        line.parameter = parameter
+        if type(data) == "table" then
+            local key = data.key
+            local parameter = data.parameter
+            local line = frame.keyBindList:AddLine(command, parameter, input.GetKeyName(key))
+            line.key = key
+            line.command = command
+            line.parameter = parameter
+        else
+            print("Invalid data for command:", command)
+        end
     end
+
+    frame.keyBindList:Clear()
+
+    for command, data in pairs(keyBinds) do
+        if type(data) == "table" then
+            local key = data.key
+            local parameter = data.parameter
+            local displayCommand = string.gsub(command, "%d*$", "") -- Retirer le suffixe numérique pour l'affichage
+            local line = frame.keyBindList:AddLine(displayCommand, parameter, input.GetKeyName(key))
+            line.key = key
+            line.command = command
+            line.parameter = parameter
+        else
+            print("Invalid data for command:", command)
+        end
+    end
+
     frame.keyBindList.OnRowRightClick = function(_, _, line)
         local menu = vgui.Create("XPMenu")
         menu:AddOption("Delete", function()
@@ -75,7 +90,7 @@ function RefreshKeyBindList()
     end
 end
 
-local function showOverwriteConfirmation(command, key, existingCommand)
+local function showOverwriteConfirmation(command, key, parameter, existingCommand)
     local confirmFrame = vgui.Create("XPFrame")
     confirmFrame:SetTitle("Overwrite Key Bind")
     confirmFrame:SetSize(300, 150)
@@ -100,18 +115,30 @@ local function showOverwriteConfirmation(command, key, existingCommand)
     cancelButton:SetSize(80, 30)
 
     confirmButton.DoClick = function()
-        keyBinds[existingCommand] = nil
-        keyBinds[command] = key
-        net.Start("KeyBindManager_Update")
-        net.WriteString(existingCommand)
-        net.WriteInt(0, 32)
-        net.SendToServer()
-        net.Start("KeyBindManager_Update")
-        net.WriteString(command)
-        net.WriteInt(key, 32)
-        net.SendToServer()
-        confirmFrame:Close()
-        RefreshKeyBindList()
+        if existingCommand and command and key then
+            -- Only remove the exact existing command
+            keyBinds[existingCommand] = nil
+            -- Add the new command with its key and parameter
+            keyBinds[command] = { key = key, parameter = parameter }
+
+            net.Start("KeyBindManager_Update")
+            net.WriteString(existingCommand)
+            net.WriteInt(0, 32) -- Clear the existing command on server
+            net.SendToServer()
+
+            net.Start("KeyBindManager_Update")
+            net.WriteString(command)
+            net.WriteInt(key, 32)
+            if parameter then
+                net.WriteString(parameter)
+            else
+                net.WriteString("")
+            end
+            net.SendToServer()
+
+            confirmFrame:Close()
+            RefreshKeyBindList()
+        end
     end
 
     cancelButton.DoClick = function()
@@ -1014,7 +1041,7 @@ local function openConfigMenu()
         if command and key and isValidCommand(command) then
             for existingCommand, existingData in pairs(keyBinds) do
                 if existingData.key == key and existingCommand ~= command then
-                    showOverwriteConfirmation(command, key, existingCommand)
+                    showOverwriteConfirmation(command, key, parameter, existingCommand)
                     return
                 end
                 if existingData.parameter == parameter and existingCommand == command then
@@ -1023,9 +1050,12 @@ local function openConfigMenu()
                     return
                 end
             end
-            -- Add an asterisk if a command with the same name exists but with a different parameter (to differentiate them)
-            if keyBinds[command] and keyBinds[command].parameter ~= parameter then
-                command = command .. "*"
+            -- Add a numeric suffix if a command with the same name already exists
+            local baseCommand = command
+            local suffix = 1
+            while keyBinds[command] do
+                command = baseCommand .. tostring(suffix)
+                suffix = suffix + 1
             end
             keyBinds[command] = { key = key, parameter = parameter }
             net.Start("KeyBindManager_Update")
@@ -1036,6 +1066,7 @@ local function openConfigMenu()
             RefreshKeyBindList()
         else
             statusLabel:SetText("Please enter a valid command and key bind.")
+            statusPanel:SetVisible(true)
         end
     end
 
@@ -1054,8 +1085,7 @@ local function openConfigMenu()
         end
 
         if IsValid(parameterEntry) then
-            parameterEntry:SetPos(100, 65)
-            parameterEntry:SetSize(self:GetWide() - 110, 25)
+            parameterLabel:SetPos(10, 70)
         end
 
         if IsValid(keyBinderLabel) then
@@ -1072,7 +1102,6 @@ local function openConfigMenu()
         end
 
         if IsValid(statusPanel) then
-            statusPanel:SetPos(10, 200)
             statusPanel:SetSize(self:GetWide() - 20, 25)
         end
 
@@ -1084,7 +1113,7 @@ local function openConfigMenu()
     RefreshKeyBindList()
 end
 
-concommand.Add("open_keybind_manager", openConfigMenu)
+concommand.Add("open_keybind_commands", openConfigMenu)
 
 if not XPGUI then
     hook.Add("Initialize", "OpenConfigMenuOnStart", function()
@@ -1100,8 +1129,8 @@ hook.Add("Think", "KeyBindManager_Think", function()
         if type(key) == "number" and input.IsKeyDown(key) then
             if not keyPressStates[key] then
                 keyPressStates[key] = true
-                -- Remove the asterisk from the command before executing it (if there is one)
-                local cleanCommand = string.gsub(command, "%*$", "")
+                -- Remove the numeric suffix from the command before executing it
+                local cleanCommand = string.gsub(command, "%d*$", "")
                 if parameter and parameter ~= "" then
                     RunConsoleCommand(cleanCommand, parameter)
                 else
@@ -1110,22 +1139,6 @@ hook.Add("Think", "KeyBindManager_Think", function()
             end
         else
             keyPressStates[key] = false
-        end
-    end
-end)
-
-hook.Add("Think", "CheckKeybinds", function()
-    if TypingInTextEntry then return end
-    for command, key in pairs(keyBinds) do
-        if type(key) == "number" and input.IsKeyDown(key) and not keyPressStates[key] then
-            keyPressStates[key] = true
-            if command == "getpos" then
-                getPlayerPosition()
-            else
-                LocalPlayer():ConCommand(command)
-            end
-        elseif type(key) == "number" and not input.IsKeyDown(key) and keyPressStates[key] then
-            keyPressStates[key] = nil
         end
     end
 end)

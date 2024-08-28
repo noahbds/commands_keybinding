@@ -1,8 +1,7 @@
-
 if SERVER then
     hook.Add("PlayerSay", "KeyBindManager_ConfigCommand", function(ply, text)
-        if ply:IsAdmin() and text == "!configure_keybind" then
-            ply:ConCommand("open_keybind_manager")
+        if ply:IsAdmin() and text == "!keybind_commands" then
+            ply:ConCommand("open_keybind_commands")
             return ""
         end
     end)
