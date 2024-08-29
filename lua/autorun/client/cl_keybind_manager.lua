@@ -33,46 +33,7 @@ local function isValidCommand(cmd)
     return string.match(cmd, "^[%w%+%-_%*/!%s]+$") ~= nil and string.match(cmd, "%S")
 end
 
-function RefreshKeyBindList()
-    if not IsValid(frame) then return end
-    if IsValid(frame.keyBindList) then
-        frame.keyBindList:Remove()
-    end
-    frame.keyBindList = vgui.Create("XPListView", frame)
-    frame.keyBindList:SetPos(10, 200)
-    frame.keyBindList:SetSize(frame:GetWide(), frame:GetTall() - 190)
 
-    frame.keyBindList:AddColumn("Command")
-    frame.keyBindList:AddColumn("Parameter")
-    frame.keyBindList:AddColumn("Key")
-
-    for command, data in pairs(keyBinds) do
-        if type(data) == "table" then
-            local key = data.key
-            local parameter = data.parameter
-            local displayCommand = string.gsub(command, "%d*$", "")
-            local line = frame.keyBindList:AddLine(displayCommand, parameter, input.GetKeyName(key))
-            line.key = key
-            line.command = command
-            line.parameter = parameter
-        else
-            print("Invalid data for command:", command)
-        end
-    end
-
-    frame.keyBindList.OnRowRightClick = function(_, _, line)
-        local menu = vgui.Create("XPMenu")
-        menu:AddOption("Delete", function()
-            keyBinds[line.command] = nil
-            net.Start("KeyBindManager_Update")
-            net.WriteString(line.command)
-            net.WriteInt(0, 32)
-            net.SendToServer()
-            RefreshKeyBindList()
-        end):SetIcon("icon16/delete.png")
-        menu:Open()
-    end
-end
 
 local function showOverwriteConfirmation(command, key, parameter, existingCommand)
     local confirmFrame = vgui.Create("XPFrame")
@@ -128,6 +89,7 @@ local function showOverwriteConfirmation(command, key, parameter, existingComman
     end
 end
 
+-- Yeah, I took all the commands from the wiki, I didn't know a better way to do this I suck at code ya know :p
 local function GetCommandSuggestions(command)
     local allCommands = {
         "+alt1", "+alt2", "+attack", "+attack2", "+attack3", "+back", "+break", "+camdistance", "+camin", "+cammousemove",
@@ -865,9 +827,9 @@ local function GetCommandSuggestions(command)
     end
 
     for _, cmd in ipairs(allCommands) do
-        if cmd:lower() == command:lower() then
+        if cmd == command then
             table.insert(exactMatches, cmd)
-        elseif cmd:lower():find(command:lower()) then
+        elseif cmd:find(command) then
             table.insert(partialMatches, cmd)
         end
     end
@@ -972,10 +934,8 @@ local function openConfigMenu()
     statusLabel:SetText("")
     statusLabel:SetContentAlignment(5)
 
-    -- Initialize the key binder click tracking
     keyBinderClicked = false
 
-    -- Function to update the save button state
     local function UpdateSaveButtonState()
         local command = commandEntry:GetValue()
         local key = keyBinder:GetValue()
@@ -1036,6 +996,14 @@ local function openConfigMenu()
 
                 statusPanel:SetVisible(false)
                 UpdateSaveButtonState()
+
+                frame:SetMouseInputEnabled(false)
+                frame:SetKeyboardInputEnabled(false)
+
+                errorFrame.OnClose = function()
+                    frame:SetMouseInputEnabled(true)
+                    frame:SetKeyboardInputEnabled(true)
+                end
             else
                 statusPanel:SetVisible(false)
                 UpdateSaveButtonState()
@@ -1053,7 +1021,6 @@ local function openConfigMenu()
         end
     end
 
-    -- Track clicks on the key binder
     keyBinder.OnChange = function()
         keyBinderClicked = true
         UpdateSaveButtonState()
@@ -1136,6 +1103,55 @@ local function openConfigMenu()
     end
 
     RefreshKeyBindList()
+end
+
+-- This Refresh the list of existing key binds
+function RefreshKeyBindList()
+    if not IsValid(frame) then return end
+    if IsValid(frame.keyBindList) then
+        frame.keyBindList:Remove()
+    end
+    frame.keyBindList = vgui.Create("XPListView", frame)
+    frame.keyBindList:SetPos(10, 200)
+    frame.keyBindList:SetSize(frame:GetWide(), frame:GetTall() - 190)
+
+    frame.keyBindList:AddColumn("Command")
+    frame.keyBindList:AddColumn("Parameter")
+    frame.keyBindList:AddColumn("Key")
+
+    for command, data in pairs(keyBinds) do
+        if type(data) == "table" then
+            local key = data.key
+            local parameter = data.parameter
+            local displayCommand = string.gsub(command, "%d*$", "")
+            local line = frame.keyBindList:AddLine(displayCommand, parameter, input.GetKeyName(key))
+            line.key = key
+            line.command = command
+            line.parameter = parameter
+        else
+            print("Invalid data for command:", command)
+        end
+    end
+
+    local totalWidth = frame.keyBindList:GetWide()
+    local numColumns = #frame.keyBindList.Columns
+    local columnWidth = totalWidth / numColumns
+
+    for _, column in ipairs(frame.keyBindList.Columns) do
+        column:SetWide(columnWidth)
+    end
+
+    frame.keyBindList.OnRowRightClick = function(_, _, line)
+        local menu = vgui.Create("XPMenu")
+        menu:AddOption("Delete", function()
+            keyBinds[line.command] = nil
+            net.Start("KeyBindManager_Update")
+            net.WriteString(line.command)
+            net.SendToServer()
+            RefreshKeyBindList()
+        end)
+        menu:Open()
+    end
 end
 
 concommand.Add("open_keybind_commands", openConfigMenu)
