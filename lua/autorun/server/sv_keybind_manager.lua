@@ -25,7 +25,7 @@ net.Receive("KeyBindManager_Update", function(len, ply)
     if ply:IsAdmin() then
         local command = net.ReadString()
         local key = net.ReadInt(32)
-        local parameter = net.ReadString()
+        local argument = net.ReadString()
 
         if key == 0 then
             keyBinds[command] = nil
@@ -38,9 +38,9 @@ net.Receive("KeyBindManager_Update", function(len, ply)
                     command = baseCommand .. tostring(suffix)
                     suffix = suffix + 1
                 end
-                keyBinds[command] = { key = key, parameter = parameter }
+                keyBinds[command] = { key = key, argument = argument }
             else
-                keyBinds[command] = { key = key, parameter = parameter }
+                keyBinds[command] = { key = key, argument = argument }
             end
         end
         saveKeyBinds(keyBinds)

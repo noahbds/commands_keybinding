@@ -35,7 +35,7 @@ end
 
 
 
-local function showOverwriteConfirmation(command, key, parameter, existingCommand)
+local function showOverwriteConfirmation(command, key, argument, existingCommand)
     local confirmFrame = vgui.Create("XPFrame")
     confirmFrame:SetTitle("Overwrite Key Bind")
     confirmFrame:SetSize(300, 150)
@@ -62,7 +62,7 @@ local function showOverwriteConfirmation(command, key, parameter, existingComman
     confirmButton.DoClick = function()
         if existingCommand and command and key then
             keyBinds[existingCommand] = nil
-            keyBinds[command] = { key = key, parameter = parameter }
+            keyBinds[command] = { key = key, argument = argument }
 
             net.Start("KeyBindManager_Update")
             net.WriteString(existingCommand)
@@ -72,8 +72,8 @@ local function showOverwriteConfirmation(command, key, parameter, existingComman
             net.Start("KeyBindManager_Update")
             net.WriteString(command)
             net.WriteInt(key, 32)
-            if parameter then
-                net.WriteString(parameter)
+            if argument then
+                net.WriteString(argument)
             else
                 net.WriteString("")
             end
@@ -841,45 +841,66 @@ local function GetCommandSuggestions(command)
     end
 end
 
-local function openConfigMenu()
-    if not XPGUI then
-        local notifyFrame = vgui.Create("DFrame")
-        notifyFrame:SetTitle("[Commands Binding] XPGUI Not Installed")
-        notifyFrame:SetSize(400, 200)
-        notifyFrame:Center()
-        notifyFrame:MakePopup()
-        surface.PlaySound("buttons/button10.wav")
+local function createNotificationFrame()
+    local notifyFrame = vgui.Create("DFrame")
+    notifyFrame:SetTitle("[Commands Binding] XPGUI Not Installed")
+    notifyFrame:SetSize(400, 200)
+    notifyFrame:Center()
+    notifyFrame:MakePopup()
+    surface.PlaySound("buttons/button10.wav")
 
-        local icon = vgui.Create("DImage", notifyFrame)
-        icon:SetImage("icon16/error.png")
-        icon:SetPos(10, 30)
+    local icon = vgui.Create("DImage", notifyFrame)
+    icon:SetImage("icon16/error.png")
+    icon:SetPos(10, 30)
 
-        local label = vgui.Create("DLabel", notifyFrame)
-        label:SetText("XPGUI is not installed. Please install it from the following link:")
-        label:SizeToContents()
-        label:SetPos(50, 40)
+    local label = vgui.Create("DLabel", notifyFrame)
+    label:SetText("XPGUI is not installed. Please install it from the following link:")
+    label:SizeToContents()
+    label:SetPos(50, 40)
 
-        local link = vgui.Create("DLabelURL", notifyFrame)
-        link:SetText("Link To the Addon")
-        link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739")
-        link:SizeToContents()
-        link:SetWide(300)
-        link:SetPos(50, 60)
+    local link = vgui.Create("DLabelURL", notifyFrame)
+    link:SetText("Link To the Addon")
+    link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739")
+    link:SizeToContents()
+    link:SetWide(300)
+    link:SetPos(50, 60)
 
-        local closeButton = vgui.Create("DButton", notifyFrame)
-        closeButton:SetText("Close")
-        closeButton:SetSize(100, 30)
-        closeButton:SetPos(150, 150)
-        closeButton.DoClick = function()
-            notifyFrame:Close()
-        end
-
-        return
+    local closeButton = vgui.Create("DButton", notifyFrame)
+    closeButton:SetText("Close")
+    closeButton:SetSize(100, 30)
+    closeButton:SetPos(150, 150)
+    closeButton.DoClick = function()
+        notifyFrame:Close()
     end
 
-    if IsValid(frame) then return end
+    return notifyFrame
+end
 
-    frame = vgui.Create("XPFrame")
+function CreateErrorFrame(message)
+    local errorFrame = vgui.Create("XPFrame")
+    errorFrame:SetTitle("Error")
+    errorFrame:SetSize(300, 100)
+    errorFrame:Center()
+    errorFrame:MakePopup()
+
+    local errorLabel = vgui.Create("DLabel", errorFrame)
+    errorLabel:SetText(message)
+    errorLabel:Dock(FILL)
+    errorLabel:SetContentAlignment(5)
+    errorLabel:SetTextColor(Color(255, 0, 0))
+
+    surface.PlaySound("common/warning.wav")
+
+    errorFrame.OnClose = function()
+        frame:SetMouseInputEnabled(true)
+        frame:SetKeyboardInputEnabled(true)
+    end
+
+    return errorFrame
+end
+
+function CreateMainFrame()
+    local frame = vgui.Create("XPFrame")
     frame:SetTitle("Key Bind Manager")
     frame:SetSize(600, 450)
     frame:Center()
@@ -889,39 +910,10 @@ local function openConfigMenu()
         frame = nil
     end
 
-    local commandLabel = vgui.Create("DLabel", frame)
-    commandLabel:SetText("Command:")
-    commandLabel:SetPos(10, 40)
-    commandLabel:SizeToContents()
+    return frame
+end
 
-    local commandEntry = vgui.Create("XPTextEntry", frame)
-    commandEntry:SetPos(100, 35)
-    commandEntry:SetSize(frame:GetWide() - 110, 25)
-
-    local parameterLabel = vgui.Create("DLabel", frame)
-    parameterLabel:SetText("Parameter:")
-    parameterLabel:SetPos(10, 70)
-    parameterLabel:SizeToContents()
-
-    local parameterEntry = vgui.Create("XPTextEntry", frame)
-    parameterEntry:SetPos(100, 65)
-    parameterEntry:SetSize(frame:GetWide() - 110, 25)
-
-    local keyBinderLabel = vgui.Create("DLabel", frame)
-    keyBinderLabel:SetText("Key Bind:")
-    keyBinderLabel:SetPos(10, 100)
-    keyBinderLabel:SizeToContents()
-
-    local keyBinder = vgui.Create("DBinder", frame)
-    keyBinder:SetPos(100, 95)
-    keyBinder:SetSize(frame:GetWide() - 110, 50)
-
-    local saveButton = vgui.Create("XPButton", frame)
-    saveButton:SetText("Save")
-    saveButton:SetPos((frame:GetWide() - 100) / 2, 160)
-    saveButton:SetSize(100, 30)
-    saveButton:SetEnabled(false)
-
+function CreateStatusPanel(frame)
     local statusPanel = vgui.Create("DPanel", frame)
     statusPanel:SetPos(10, 200)
     statusPanel:SetSize(frame:GetWide() - 20, 25)
@@ -933,6 +925,73 @@ local function openConfigMenu()
     statusLabel:SetTextColor(Color(255, 255, 255))
     statusLabel:SetText("")
     statusLabel:SetContentAlignment(5)
+
+    return statusPanel, statusLabel
+end
+
+function CreateCommandEntry(frame)
+    local commandLabel = vgui.Create("DLabel", frame)
+    commandLabel:SetText("Command:")
+    commandLabel:SetPos(10, 40)
+    commandLabel:SizeToContents()
+
+    local commandEntry = vgui.Create("XPTextEntry", frame)
+    commandEntry:SetPos(100, 35)
+    commandEntry:SetSize(frame:GetWide() - 110, 25)
+
+    return commandEntry
+end
+
+function CreateArgumentEntry(frame)
+    local argumentLabel = vgui.Create("DLabel", frame)
+    argumentLabel:SetText("Argument:")
+    argumentLabel:SetPos(10, 70)
+    argumentLabel:SizeToContents()
+
+    local argumentEntry = vgui.Create("XPTextEntry", frame)
+    argumentEntry:SetPos(100, 65)
+    argumentEntry:SetSize(frame:GetWide() - 110, 25)
+
+    return argumentEntry
+end
+
+function CreateKeyBinder(frame)
+    local keyBinderLabel = vgui.Create("DLabel", frame)
+    keyBinderLabel:SetText("Key Bind:")
+    keyBinderLabel:SetPos(10, 100)
+    keyBinderLabel:SizeToContents()
+
+    local keyBinder = vgui.Create("DBinder", frame)
+    keyBinder:SetPos(100, 95)
+    keyBinder:SetSize(frame:GetWide() - 110, 50)
+
+    return keyBinder
+end
+
+function CreateSaveButton(frame)
+    local saveButton = vgui.Create("XPButton", frame)
+    saveButton:SetText("Save")
+    saveButton:SetPos((frame:GetWide() - 100) / 2, 160)
+    saveButton:SetSize(100, 30)
+    saveButton:SetEnabled(false)
+
+    return saveButton
+end
+
+local function openConfigMenu()
+    if not XPGUI then
+        createNotificationFrame()
+        return
+    end
+
+    if IsValid(frame) then return end
+
+    frame = CreateMainFrame()
+    local statusPanel, statusLabel = CreateStatusPanel(frame)
+    local commandEntry = CreateCommandEntry(frame)
+    local argumentEntry = CreateArgumentEntry(frame)
+    local keyBinder = CreateKeyBinder(frame)
+    local saveButton = CreateSaveButton(frame)
 
     keyBinderClicked = false
 
@@ -969,7 +1028,13 @@ local function openConfigMenu()
                 SuggestionsList:AddLine(suggestion)
             end
             SuggestionsList.OnRowSelected = function(_, _, line)
-                commandEntry:SetText(line:GetColumnText(1))
+                local selectedCommand = line:GetColumnText(1)
+                if not IsConCommandBlocked(selectedCommand) then
+                    commandEntry:SetText(selectedCommand)
+                else
+                    commandEntry:SetText("")
+                    CreateErrorFrame("This Command is Blacklisted.")
+                end
                 SuggestionsList:Remove()
             end
         end
@@ -977,33 +1042,12 @@ local function openConfigMenu()
         if isValidCommand(command) then
             if IsConCommandBlocked(command) then
                 SuggestionsList:Remove()
-
-                local errorFrame = vgui.Create("XPFrame")
-                errorFrame:SetTitle("Error")
-                errorFrame:SetSize(300, 100)
-                errorFrame:Center()
-                errorFrame:MakePopup()
-
-                local errorLabel = vgui.Create("DLabel", errorFrame)
-                errorLabel:SetText("This Command is Blacklisted.")
-                errorLabel:Dock(FILL)
-                errorLabel:SetContentAlignment(5)
-                errorLabel:SetTextColor(Color(255, 0, 0))
-
-                surface.PlaySound("common/warning.wav")
-
+                CreateErrorFrame("This Command is Blacklisted.")
                 commandEntry:SetText("")
-
                 statusPanel:SetVisible(false)
                 UpdateSaveButtonState()
-
                 frame:SetMouseInputEnabled(false)
                 frame:SetKeyboardInputEnabled(false)
-
-                errorFrame.OnClose = function()
-                    frame:SetMouseInputEnabled(true)
-                    frame:SetKeyboardInputEnabled(true)
-                end
             else
                 statusPanel:SetVisible(false)
                 UpdateSaveButtonState()
@@ -1029,15 +1073,15 @@ local function openConfigMenu()
     saveButton.DoClick = function()
         local command = commandEntry:GetValue()
         local key = keyBinder:GetValue()
-        local parameter = parameterEntry:GetValue()
+        local argument = argumentEntry:GetValue()
         if command and key and isValidCommand(command) then
             for existingCommand, existingData in pairs(keyBinds) do
                 if existingData.key == key and existingCommand ~= command then
-                    showOverwriteConfirmation(command, key, parameter, existingCommand)
+                    showOverwriteConfirmation(command, key, argument, existingCommand)
                     return
                 end
-                if existingData.parameter == parameter and existingCommand == command then
-                    statusLabel:SetText("A command with the same name and parameter already exists.")
+                if existingData.argument == argument and existingCommand == command then
+                    statusLabel:SetText("A command with the same name and argument already exists.")
                     statusPanel:SetVisible(true)
                     return
                 end
@@ -1049,11 +1093,11 @@ local function openConfigMenu()
                 command = baseCommand .. tostring(suffix)
                 suffix = suffix + 1
             end
-            keyBinds[command] = { key = key, parameter = parameter }
+            keyBinds[command] = { key = key, argument = argument }
             net.Start("KeyBindManager_Update")
             net.WriteString(command)
             net.WriteInt(key, 32)
-            net.WriteString(parameter)
+            net.WriteString(argument)
             net.SendToServer()
             RefreshKeyBindList()
         else
@@ -1072,12 +1116,12 @@ local function openConfigMenu()
             commandEntry:SetSize(self:GetWide() - 110, 25)
         end
 
-        if IsValid(parameterLabel) then
-            parameterLabel:SetPos(10, 70)
+        if IsValid(argumentLabel) then
+            argumentLabel:SetPos(10, 70)
         end
 
-        if IsValid(parameterEntry) then
-            parameterEntry:SetPos(100, 65)
+        if IsValid(argumentEntry) then
+            argumentEntry:SetPos(100, 65)
         end
 
         if IsValid(keyBinderLabel) then
@@ -1116,18 +1160,18 @@ function RefreshKeyBindList()
     frame.keyBindList:SetSize(frame:GetWide(), frame:GetTall() - 190)
 
     frame.keyBindList:AddColumn("Command")
-    frame.keyBindList:AddColumn("Parameter")
+    frame.keyBindList:AddColumn("Argument")
     frame.keyBindList:AddColumn("Key")
 
     for command, data in pairs(keyBinds) do
         if type(data) == "table" then
             local key = data.key
-            local parameter = data.parameter
+            local argument = data.argument
             local displayCommand = string.gsub(command, "%d*$", "")
-            local line = frame.keyBindList:AddLine(displayCommand, parameter, input.GetKeyName(key))
+            local line = frame.keyBindList:AddLine(displayCommand, argument, input.GetKeyName(key))
             line.key = key
             line.command = command
-            line.parameter = parameter
+            line.argument = argument
         else
             print("Invalid data for command:", command)
         end
@@ -1166,14 +1210,14 @@ hook.Add("Think", "KeyBindManager_Think", function()
     if TypingInTextEntry then return end
     for command, data in pairs(keyBinds) do
         local key = data.key
-        local parameter = data.parameter
+        local argument = data.argument
         if type(key) == "number" and input.IsKeyDown(key) then
             if not keyPressStates[key] then
                 keyPressStates[key] = true
                 -- Remove the numeric suffix from the command before executing it
                 local cleanCommand = string.gsub(command, "%d*$", "")
-                if parameter and parameter ~= "" then
-                    RunConsoleCommand(cleanCommand, parameter)
+                if argument and argument ~= "" then
+                    RunConsoleCommand(cleanCommand, argument)
                 else
                     RunConsoleCommand(cleanCommand)
                 end
