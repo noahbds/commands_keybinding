@@ -1,1 +1,1 @@
-GArry's Mod addon that allow to bind a command to a keyboard key
+Garry's Mod addon that allow to bind a command to a keyboard key
