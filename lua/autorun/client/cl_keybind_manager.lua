@@ -1,6 +1,5 @@
 if SERVER then return end
 
-
 -- Ensure the XPGUI library is included (It's Workshop Library Addon)
 hook.Add("Initialize", "LoadXPGUI", function()
     if not XPGUI then
@@ -13,6 +12,7 @@ local keyPressStates = {}
 local frame
 
 TypingInTextEntry = false
+local keyBinderClicked = false
 
 hook.Add("OnTextEntryGetFocus", "IsTyping", function()
     TypingInTextEntry = true
@@ -21,7 +21,6 @@ end)
 hook.Add("OnTextEntryLoseFocus", "IsNotTyping", function()
     TypingInTextEntry = false
 end)
-
 
 net.Receive("KeyBindManager_Config", function()
     keyBinds = net.ReadTable()
@@ -74,12 +73,6 @@ function RefreshKeyBindList()
         menu:Open()
     end
 end
-
--- Listen for updates from the server to refresh the key bind list
-net.Receive("KeyBindManager_Config", function()
-    keyBinds = net.ReadTable()
-    RefreshKeyBindList()
-end)
 
 local function showOverwriteConfirmation(command, key, parameter, existingCommand)
     local confirmFrame = vgui.Create("XPFrame")
@@ -135,7 +128,6 @@ local function showOverwriteConfirmation(command, key, parameter, existingComman
     end
 end
 
--- Yeah, I took all the commands from the wiki, I didn't know a better way to do this I suck at code ya know :p
 local function GetCommandSuggestions(command)
     local allCommands = {
         "+alt1", "+alt2", "+attack", "+attack2", "+attack3", "+back", "+break", "+camdistance", "+camin", "+cammousemove",
@@ -907,7 +899,7 @@ local function openConfigMenu()
 
         local link = vgui.Create("DLabelURL", notifyFrame)
         link:SetText("Link To the Addon")
-        link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739") -- Gmod Url Style Look awful but it works
+        link:SetURL("https://steamcommunity.com/workshop/filedetails/?id=2390567739")
         link:SizeToContents()
         link:SetWide(300)
         link:SetPos(50, 60)
@@ -980,6 +972,20 @@ local function openConfigMenu()
     statusLabel:SetText("")
     statusLabel:SetContentAlignment(5)
 
+    -- Initialize the key binder click tracking
+    keyBinderClicked = false
+
+    -- Function to update the save button state
+    local function UpdateSaveButtonState()
+        local command = commandEntry:GetValue()
+        local key = keyBinder:GetValue()
+        if keyBinderClicked and isValidCommand(command) then
+            saveButton:SetEnabled(true)
+        else
+            saveButton:SetEnabled(false)
+        end
+    end
+
     commandEntry.OnChange = function()
         local command = commandEntry:GetValue()
 
@@ -989,7 +995,7 @@ local function openConfigMenu()
 
         if not commandEntry:IsEditing() or command == "" then
             statusPanel:SetVisible(false)
-            saveButton:SetEnabled(false)
+            UpdateSaveButtonState()
             return
         end
 
@@ -1029,22 +1035,28 @@ local function openConfigMenu()
                 commandEntry:SetText("")
 
                 statusPanel:SetVisible(false)
-                saveButton:SetEnabled(false)
+                UpdateSaveButtonState()
             else
                 statusPanel:SetVisible(false)
-                saveButton:SetEnabled(true)
+                UpdateSaveButtonState()
             end
         else
             statusLabel:SetText(
                 "Invalid command. Only alphanumeric characters, spaces (if not alone), and + - _ * / ! are allowed.")
             statusPanel:SetVisible(true)
             statusPanel:MoveToFront()
-            saveButton:SetEnabled(false)
+            UpdateSaveButtonState()
         end
 
         if command == "" then
             return
         end
+    end
+
+    -- Track clicks on the key binder
+    keyBinder.OnChange = function()
+        keyBinderClicked = true
+        UpdateSaveButtonState()
     end
 
     saveButton.DoClick = function()
@@ -1098,7 +1110,7 @@ local function openConfigMenu()
         end
 
         if IsValid(parameterEntry) then
-            parameterLabel:SetPos(10, 70)
+            parameterEntry:SetPos(100, 65)
         end
 
         if IsValid(keyBinderLabel) then
