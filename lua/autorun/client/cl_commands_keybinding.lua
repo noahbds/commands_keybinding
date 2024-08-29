@@ -22,7 +22,7 @@ hook.Add("OnTextEntryLoseFocus", "IsNotTyping", function()
     TypingInTextEntry = false
 end)
 
-net.Receive("KeyBindManager_Config", function()
+net.Receive("CommandsKeyBinding_Config", function()
     keyBinds = net.ReadTable()
     if IsValid(frame) then
         RefreshKeyBindList()
@@ -64,12 +64,12 @@ local function showOverwriteConfirmation(command, key, argument, existingCommand
             keyBinds[existingCommand] = nil
             keyBinds[command] = { key = key, argument = argument }
 
-            net.Start("KeyBindManager_Update")
+            net.Start("CommandsKeyBinding_Update")
             net.WriteString(existingCommand)
             net.WriteInt(0, 32)
             net.SendToServer()
 
-            net.Start("KeyBindManager_Update")
+            net.Start("CommandsKeyBinding_Update")
             net.WriteString(command)
             net.WriteInt(key, 32)
             if argument then
@@ -843,7 +843,7 @@ end
 
 local function createNotificationFrame()
     local notifyFrame = vgui.Create("DFrame")
-    notifyFrame:SetTitle("[Commands Binding] XPGUI Not Installed")
+    notifyFrame:SetTitle("[Commands Key Binding] XPGUI Not Installed")
     notifyFrame:SetSize(400, 200)
     notifyFrame:Center()
     notifyFrame:MakePopup()
@@ -901,7 +901,7 @@ end
 
 function CreateMainFrame()
     local frame = vgui.Create("XPFrame")
-    frame:SetTitle("Key Bind Manager")
+    frame:SetTitle("Commands Key Binding")
     frame:SetSize(600, 450)
     frame:Center()
     frame:MakePopup()
@@ -1094,7 +1094,7 @@ local function openConfigMenu()
                 suffix = suffix + 1
             end
             keyBinds[command] = { key = key, argument = argument }
-            net.Start("KeyBindManager_Update")
+            net.Start("CommandsKeyBinding_Update")
             net.WriteString(command)
             net.WriteInt(key, 32)
             net.WriteString(argument)
@@ -1189,7 +1189,7 @@ function RefreshKeyBindList()
         local menu = vgui.Create("XPMenu")
         menu:AddOption("Delete", function()
             keyBinds[line.command] = nil
-            net.Start("KeyBindManager_Update")
+            net.Start("CommandsKeyBinding_Update")
             net.WriteString(line.command)
             net.SendToServer()
             RefreshKeyBindList()
@@ -1198,7 +1198,7 @@ function RefreshKeyBindList()
     end
 end
 
-concommand.Add("open_keybind_commands", openConfigMenu)
+concommand.Add("open_commands_keybinding", openConfigMenu)
 
 if not XPGUI then
     hook.Add("Initialize", "OpenConfigMenuOnStart", function()
@@ -1206,7 +1206,7 @@ if not XPGUI then
     end)
 end
 
-hook.Add("Think", "KeyBindManager_Think", function()
+hook.Add("Think", "CommandsKeyBinding_Think", function()
     if TypingInTextEntry then return end
     for command, data in pairs(keyBinds) do
         local key = data.key

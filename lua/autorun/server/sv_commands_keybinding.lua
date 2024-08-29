@@ -1,7 +1,7 @@
-util.AddNetworkString("KeyBindManager_Config")
-util.AddNetworkString("KeyBindManager_Update")
+util.AddNetworkString("CommandsKeyBinding_Config")
+util.AddNetworkString("CommandsKeyBinding_Update")
 
-local keyBindFile = "keybind_commands/keybinds.json"
+local keyBindFile = "commands_keybinding/commands_keybinds.json"
 
 -- Load the key binds from the file
 local function loadKeyBinds()
@@ -15,13 +15,13 @@ end
 
 -- Save the key binds to the file
 local function saveKeyBinds(keyBinds)
-    file.CreateDir("keybind_commands")
+    file.CreateDir("commands_keybinding")
     file.Write(keyBindFile, util.TableToJSON(keyBinds))
 end
 
 local keyBinds = loadKeyBinds()
 
-net.Receive("KeyBindManager_Update", function(len, ply)
+net.Receive("CommandsKeyBinding_Update", function(len, ply)
     if ply:IsAdmin() then
         local command = net.ReadString()
         local key = net.ReadInt(32)
@@ -44,15 +44,15 @@ net.Receive("KeyBindManager_Update", function(len, ply)
             end
         end
         saveKeyBinds(keyBinds)
-        net.Start("KeyBindManager_Config")
+        net.Start("CommandsKeyBinding_Config")
         net.WriteTable(keyBinds)
         net.Broadcast()
     end
 end)
 
 -- Send the current key binds to the client
-hook.Add("PlayerInitialSpawn", "SendKeyBindManager", function(ply)
-    net.Start("KeyBindManager_Config")
+hook.Add("PlayerInitialSpawn", "SendCommandsKeyBinding", function(ply)
+    net.Start("CommandsKeyBinding_Config")
     net.WriteTable(keyBinds)
     net.Send(ply)
 end)
