@@ -891,6 +891,9 @@ function CreateErrorFrame(message)
 
     surface.PlaySound("common/warning.wav")
 
+    frame:SetMouseInputEnabled(false)
+    frame:SetKeyboardInputEnabled(false)
+
     errorFrame.OnClose = function()
         frame:SetMouseInputEnabled(true)
         frame:SetKeyboardInputEnabled(true)
