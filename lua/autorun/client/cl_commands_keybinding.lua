@@ -1211,6 +1211,7 @@ end
 
 hook.Add("Think", "CommandsKeyBinding_Think", function()
     if TypingInTextEntry then return end
+    if LocalPlayer():IsTyping() then return end
     for command, data in pairs(keyBinds) do
         local key = data.key
         local argument = data.argument
