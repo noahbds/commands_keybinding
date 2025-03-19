@@ -16,14 +16,13 @@ local CONFIG = {
     VERSION = "1.2.0"
 }
 
--- Initialisation des dossiers
+
 file.CreateDir(CONFIG.SAVE_PATH)
 file.CreateDir(CONFIG.PLAYER_BINDS_PATH)
 
 local keyBinds = {}
 local playerProfiles = {}
 
--- Journalisation des modifications
 local function logChange(ply, action, details)
     if not file.Exists(CONFIG.LOG_FILE, "DATA") then
         file.Write(CONFIG.LOG_FILE, "---- Keybind Manager Log ----\n")
@@ -41,9 +40,7 @@ local function logChange(ply, action, details)
     file.Append(CONFIG.LOG_FILE, logEntry)
 end
 
--- Sauvegarde avec système de rotation
 local function saveKeyBinds()
-    -- Créer une sauvegarde rotative
     if file.Exists(CONFIG.GLOBAL_BINDS_FILE, "DATA") then
         for i = CONFIG.BACKUP_COUNT, 1, -1 do
             local srcFile = i == 1
@@ -58,12 +55,10 @@ local function saveKeyBinds()
         end
     end
 
-    -- Écriture du fichier principal
     file.Write(CONFIG.GLOBAL_BINDS_FILE, util.TableToJSON(keyBinds, true))
     logChange(nil, "AUTO_SAVE", "Global keybinds saved")
 end
 
--- Chargement des raccourcis globaux
 local function loadKeyBinds()
     if file.Exists(CONFIG.GLOBAL_BINDS_FILE, "DATA") then
         local data = file.Read(CONFIG.GLOBAL_BINDS_FILE, "DATA")
@@ -75,7 +70,6 @@ local function loadKeyBinds()
             ErrorNoHalt("[KeyBindManager] Error loading keybinds: Invalid JSON data\n")
             logChange(nil, "ERROR", "Failed to load global keybinds - JSON parse error")
 
-            -- Récupérer une sauvegarde si disponible
             for i = 1, CONFIG.BACKUP_COUNT do
                 local backupFile = string.format("%s.bak%d", CONFIG.GLOBAL_BINDS_FILE, i)
                 if file.Exists(backupFile, "DATA") then
@@ -92,7 +86,6 @@ local function loadKeyBinds()
     return {}
 end
 
--- Chargement des profils personnels des joueurs
 local function loadPlayerProfile(steamID)
     local profileFile = CONFIG.PLAYER_BINDS_PATH .. steamID .. ".json"
 
@@ -105,7 +98,6 @@ local function loadPlayerProfile(steamID)
         end
     end
 
-    -- Créer un nouveau profil vide
     return {
         useGlobalBinds = true,
         personalBinds = {},
@@ -113,7 +105,6 @@ local function loadPlayerProfile(steamID)
     }
 end
 
--- Sauvegarder le profil d'un joueur
 local function savePlayerProfile(steamID, profile)
     if not profile then return end
 
@@ -122,11 +113,9 @@ local function savePlayerProfile(steamID, profile)
     file.Write(profileFile, util.TableToJSON(profile, true))
 end
 
--- Sauvegarde périodique
 timer.Create("KeyBindManager_AutoSave", CONFIG.AUTO_SAVE_INTERVAL, 0, function()
     saveKeyBinds()
 
-    -- Sauvegarder les profils des joueurs connectés
     for _, ply in ipairs(player.GetAll()) do
         local steamID = ply:SteamID64()
         if playerProfiles[steamID] then
@@ -135,75 +124,55 @@ timer.Create("KeyBindManager_AutoSave", CONFIG.AUTO_SAVE_INTERVAL, 0, function()
     end
 end)
 
--- Initialisation des données
 keyBinds = loadKeyBinds()
 
--- Valider une commande
-local function isValidCommand(command, key, argument)
-    -- Vérifier si la commande est valide
-    if not isstring(command) or string.len(command) < 1 then return false end
-    if not isnumber(key) then return false end
-
-    -- À personnaliser selon vos besoins
-    return true
-end
-
--- Envoyer la configuration à un joueur
 local function sendConfigToPlayer(ply)
     local steamID = ply:SteamID64()
 
-    -- Charger le profil du joueur s'il n'est pas déjà chargé
     if not playerProfiles[steamID] then
         playerProfiles[steamID] = loadPlayerProfile(steamID)
     end
 
     local profile = playerProfiles[steamID]
 
-    -- Envoyer les touches globales si le joueur les utilise
     if profile.useGlobalBinds then
         net.Start("CommandsKeyBinding_Config")
-        net.WriteBool(true) -- Indique si ce sont des raccourcis globaux
+        net.WriteBool(true)
         net.WriteTable(keyBinds)
         net.Send(ply)
     end
 
-    -- Envoyer aussi les touches personnelles
     net.Start("CommandsKeyBinding_Config")
-    net.WriteBool(false) -- Indique si ce sont des raccourcis personnels
+    net.WriteBool(false)
     net.WriteTable(profile.personalBinds)
     net.Send(ply)
 end
 
--- Mise à jour des raccourcis
 net.Receive("CommandsKeyBinding_Update", function(len, ply)
-    local isGlobal = net.ReadBool() -- Si la modification est pour les raccourcis globaux
-    local command = net.ReadString()
+    local isGlobal = net.ReadBool()
     local key = net.ReadInt(32)
     local argument = net.ReadString()
     local useCtrl = net.ReadBool()
     local useAlt = net.ReadBool()
 
-    -- Vérifier les permissions
     if isGlobal and not ply:IsAdmin() then
         ply:ChatPrint("[KeyBindManager] Vous devez être administrateur pour modifier les raccourcis globaux.")
         return
     end
 
-    -- Vérifier la validité de la commande
-    if not isValidCommand(command, key, argument) then
+    if not IsValidCommand(Command, key, argument) then
         ply:ChatPrint("[KeyBindManager] Commande invalide.")
         return
     end
 
     if isGlobal then
-        -- Mise à jour des raccourcis globaux
         if key == 0 then
-            if keyBinds[command] then
-                keyBinds[command] = nil
-                logChange(ply, "DELETE_GLOBAL", command)
+            if keyBinds[Command] then
+                keyBinds[Command] = nil
+                logChange(ply, "DELETE_GLOBAL", Command)
             end
         else
-            keyBinds[command] = {
+            keyBinds[Command] = {
                 key = key,
                 argument = argument,
                 ctrl = useCtrl,
@@ -211,24 +180,21 @@ net.Receive("CommandsKeyBinding_Update", function(len, ply)
                 lastModified = os.time(),
                 modifiedBy = ply:SteamID64()
             }
-            logChange(ply, "UPDATE_GLOBAL", command .. " -> " .. key)
+            logChange(ply, "UPDATE_GLOBAL", Command .. " -> " .. key)
         end
 
-        -- Sauvegarder et synchroniser avec tous les clients
         saveKeyBinds()
 
-        -- Envoyer uniquement aux joueurs qui utilisent les raccourcis globaux
         for _, client in ipairs(player.GetAll()) do
             local clientID = client:SteamID64()
             if playerProfiles[clientID] and playerProfiles[clientID].useGlobalBinds then
                 net.Start("CommandsKeyBinding_Config")
-                net.WriteBool(true) -- Raccourcis globaux
+                net.WriteBool(true)
                 net.WriteTable(keyBinds)
                 net.Send(client)
             end
         end
     else
-        -- Mise à jour des raccourcis personnels
         local steamID = ply:SteamID64()
 
         if not playerProfiles[steamID] then
@@ -236,33 +202,30 @@ net.Receive("CommandsKeyBinding_Update", function(len, ply)
         end
 
         if key == 0 then
-            if playerProfiles[steamID].personalBinds[command] then
-                playerProfiles[steamID].personalBinds[command] = nil
-                logChange(ply, "DELETE_PERSONAL", command)
+            if playerProfiles[steamID].personalBinds[Command] then
+                playerProfiles[steamID].personalBinds[Command] = nil
+                logChange(ply, "DELETE_PERSONAL", Command)
             end
         else
-            playerProfiles[steamID].personalBinds[command] = {
+            playerProfiles[steamID].personalBinds[Command] = {
                 key = key,
                 argument = argument,
                 ctrl = useCtrl,
                 alt = useAlt,
                 lastModified = os.time()
             }
-            logChange(ply, "UPDATE_PERSONAL", command .. " -> " .. key)
+            logChange(ply, "UPDATE_PERSONAL", Command .. " -> " .. key)
         end
 
-        -- Sauvegarder le profil personnel
         savePlayerProfile(steamID, playerProfiles[steamID])
 
-        -- Envoyer uniquement au joueur concerné
         net.Start("CommandsKeyBinding_Config")
-        net.WriteBool(false) -- Raccourcis personnels
+        net.WriteBool(false)
         net.WriteTable(playerProfiles[steamID].personalBinds)
         net.Send(ply)
     end
 end)
 
--- Gestion des profils
 net.Receive("CommandsKeyBinding_ProfileSwitch", function(len, ply)
     local useGlobal = net.ReadBool()
     local steamID = ply:SteamID64()
@@ -277,13 +240,11 @@ net.Receive("CommandsKeyBinding_ProfileSwitch", function(len, ply)
     ply:ChatPrint("[KeyBindManager] Vous utilisez maintenant les raccourcis " ..
         (useGlobal and "globaux et personnels." or "uniquement personnels."))
 
-    -- Synchroniser le client
     sendConfigToPlayer(ply)
 
     logChange(ply, "PROFILE_SETTING", "Set useGlobalBinds to " .. tostring(useGlobal))
 end)
 
--- Le client demande la liste des profils disponibles (administrateur uniquement)
 net.Receive("CommandsKeyBinding_ProfileList", function(len, ply)
     if not ply:IsAdmin() then return end
 
@@ -309,14 +270,11 @@ net.Receive("CommandsKeyBinding_ProfileList", function(len, ply)
     net.Send(ply)
 end)
 
--- Un client demande spécifiquement la configuration
 net.Receive("CommandsKeyBinding_Request", function(len, ply)
     sendConfigToPlayer(ply)
 end)
 
--- Initialisation des joueurs
 hook.Add("PlayerInitialSpawn", "SendCommandsKeyBinding", function(ply)
-    -- Attendre un peu pour s'assurer que le client est prêt
     timer.Simple(2, function()
         if IsValid(ply) then
             sendConfigToPlayer(ply)
@@ -324,7 +282,6 @@ hook.Add("PlayerInitialSpawn", "SendCommandsKeyBinding", function(ply)
     end)
 end)
 
--- Déchargement des profils à la déconnexion pour économiser de la mémoire
 hook.Add("PlayerDisconnected", "SavePlayerKeyBindProfile", function(ply)
     local steamID = ply:SteamID64()
 
@@ -334,7 +291,6 @@ hook.Add("PlayerDisconnected", "SavePlayerKeyBindProfile", function(ply)
     end
 end)
 
--- Compatibilité avec l'ancien format
 hook.Add("Initialize", "MigrateOldKeybindsFormat", function()
     local oldFile = "commands_keybinding/commands_keybinds.json"
     if file.Exists(oldFile, "DATA") and not file.Exists(CONFIG.GLOBAL_BINDS_FILE, "DATA") then

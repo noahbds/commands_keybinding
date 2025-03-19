@@ -1,8 +1,7 @@
 KeyBindManager = KeyBindManager or {}
 KeyBindManager.Languages = {}
-KeyBindManager.CurrentLanguage = "en" -- English as default
+KeyBindManager.CurrentLanguage = "en"
 
--- Function to add a new language
 function KeyBindManager.AddLanguage(langCode, langName, translations)
     KeyBindManager.Languages[langCode] = {
         name = langName,
@@ -10,7 +9,6 @@ function KeyBindManager.AddLanguage(langCode, langName, translations)
     }
 end
 
--- Function to set the current language
 function KeyBindManager.SetLanguage(langCode)
     if KeyBindManager.Languages[langCode] then
         KeyBindManager.CurrentLanguage = langCode
@@ -19,7 +17,6 @@ function KeyBindManager.SetLanguage(langCode)
     return false
 end
 
--- Function to get the list of available languages
 function KeyBindManager.GetLanguages()
     local languages = {}
     for code, lang in pairs(KeyBindManager.Languages) do
@@ -28,29 +25,25 @@ function KeyBindManager.GetLanguages()
     return languages
 end
 
--- Function to translate a string
 function KeyBindManager.GetPhrase(key, ...)
     local currentLang = KeyBindManager.CurrentLanguage
 
     if not KeyBindManager.Languages[currentLang] then
-        currentLang = "en" -- Fallback to English
+        currentLang = "en"
     end
 
     local translation = KeyBindManager.Languages[currentLang].translations[key]
 
     if not translation then
-        -- Fallback to English if translation is missing
         if currentLang ~= "en" and KeyBindManager.Languages["en"] then
             translation = KeyBindManager.Languages["en"].translations[key]
         end
 
-        -- If still no translation, return the key
         if not translation then
             return key
         end
     end
 
-    -- Handle string formatting
     if ... then
         return string.format(translation, ...)
     end
@@ -58,22 +51,18 @@ function KeyBindManager.GetPhrase(key, ...)
     return translation
 end
 
--- Shorthand function for translation
 function L(key, ...)
     return KeyBindManager.GetPhrase(key, ...)
 end
 
--- Create ConVar for language selection
 local languageConVar = CreateClientConVar("keybind_language", "auto", true, false, "Language for Keybind Manager")
 
--- Detect system language and set appropriate language
 local function DetectLanguage()
     local langCode = languageConVar:GetString()
 
     if langCode == "auto" then
         local systemLang = system.GetCountry():lower()
 
-        -- Map countries to languages
         local countryMap = {
             ["fr"] = "fr",
             ["ca"] = "fr", -- Quebec
@@ -90,13 +79,11 @@ local function DetectLanguage()
         langCode = countryMap[systemLang] or "en"
     end
 
-    -- Set language if it exists, otherwise default to English
     if not KeyBindManager.SetLanguage(langCode) then
         KeyBindManager.SetLanguage("en")
     end
 end
 
--- Load language files
 hook.Add("InitPostEntity", "KeyBindManager_LoadLanguages", function()
     local files, _ = file.Find("autorun/client/languages/*.lua", "LUA")
 
@@ -109,7 +96,6 @@ hook.Add("InitPostEntity", "KeyBindManager_LoadLanguages", function()
     print("[Keybind Manager] Loaded " .. table.Count(KeyBindManager.Languages) .. " languages")
 end)
 
--- Create console command to change language
 concommand.Add("keybind_set_language", function(ply, cmd, args)
     local langCode = args[1]
 
