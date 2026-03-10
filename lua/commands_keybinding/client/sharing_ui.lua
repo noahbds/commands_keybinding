@@ -161,8 +161,11 @@ end)
 net.Receive("CKB_ShareResult", function()
     local targetName = net.ReadString()
     local accepted = net.ReadBool()
+    local reason = net.ReadString()
 
-    if accepted then
+    if reason and reason ~= "" then
+        chat.AddText(THEME.accent, "[CKB] ", THEME.danger, reason)
+    elseif accepted then
         chat.AddText(THEME.accent, "[CKB] ", THEME.success, targetName .. " accepted your shared profile!")
     else
         chat.AddText(THEME.accent, "[CKB] ", THEME.danger, targetName .. " declined your shared profile.")

@@ -24,6 +24,7 @@ net.Receive("CKB_AdminGetPlayers", function(len, ply)
                 profileCount = profileCount,
                 activeProfile = activeName,
                 sharingAllowed = sharingAllowed,
+                rankLevel = CKB_SV.GetRankLevel(p),
             })
         end
     end
@@ -36,7 +37,9 @@ net.Receive("CKB_AdminGetPlayers", function(len, ply)
         net.WriteUInt(p.profileCount, 16)
         net.WriteString(p.activeProfile)
         net.WriteBool(p.sharingAllowed)
+        net.WriteUInt(p.rankLevel, 8)
     end
+    net.WriteUInt(CKB_SV.GetRankLevel(ply), 8)
     net.Send(ply)
 end)
 
@@ -152,6 +155,9 @@ net.Receive("CKB_AdminToggleSharing", function(len, ply)
 
     local target = player.GetBySteamID64(targetSteamId)
     if not IsValid(target) then return end
+
+    -- Hierarchy: can only toggle sharing for players of strictly lower rank
+    if CKB_SV.GetRankLevel(target) >= CKB_SV.GetRankLevel(ply) then return end
 
     local data = CKB_SV.LoadPlayerData(target)
     data.sharingAllowed = enabled

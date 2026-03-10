@@ -15,6 +15,15 @@ function CKB_SV.IsAdmin(ply)
     return ply:IsAdmin() or ply:IsSuperAdmin()
 end
 
+-- ── Rank level for hierarchy checks ───────────────────
+
+function CKB_SV.GetRankLevel(ply)
+    if not IsValid(ply) then return 0 end
+    if ply:IsSuperAdmin() then return 3 end
+    if ply:IsAdmin() then return 2 end
+    return 1
+end
+
 -- ── Can player share? ─────────────────────────────────
 
 function CKB_SV.CanShare(ply)
@@ -29,7 +38,14 @@ end
 net.Receive("CKB_ShareProfile", function(len, ply)
     if not IsValid(ply) then return end
     if not CKB_SV.CheckRateLimit(ply) then return end
-    if not CKB_SV.CanShare(ply) then return end
+    if not CKB_SV.CanShare(ply) then
+        net.Start("CKB_ShareResult")
+        net.WriteString("")
+        net.WriteBool(false)
+        net.WriteString("You are not allowed to share profiles.")
+        net.Send(ply)
+        return
+    end
 
     local profileId = net.ReadString()
     local targetId = net.ReadString()
@@ -90,6 +106,7 @@ net.Receive("CKB_ShareAccept", function(len, ply)
         net.Start("CKB_ShareResult")
         net.WriteString(ply:Nick())
         net.WriteBool(true)
+        net.WriteString("")
         net.Send(pending.sender)
     end
 end)
@@ -112,6 +129,7 @@ net.Receive("CKB_ShareDecline", function(len, ply)
         net.Start("CKB_ShareResult")
         net.WriteString(ply:Nick())
         net.WriteBool(false)
+        net.WriteString("")
         net.Send(pending.sender)
     end
 end)

@@ -198,6 +198,8 @@ function CKB.OpenAdminPanel()
 
     -- ── Receive player list ───────────────────────────
 
+    local myRankLevel = 1
+
     net.Receive("CKB_AdminPlayerList", function()
         local count = net.ReadUInt(16)
         playerList:Clear()
@@ -207,20 +209,28 @@ function CKB.OpenAdminPanel()
             local profileCount = net.ReadUInt(16)
             local activeProfile = net.ReadString()
             local sharingAllowed = net.ReadBool()
+            local rankLevel = net.ReadUInt(8)
             local line = playerList:AddLine(nick, profileCount, activeProfile, sharingAllowed and "\226\156\147" or "\226\156\151")
             line._steamId = steamId
             line._sharingAllowed = sharingAllowed
+            line._rankLevel = rankLevel
         end
+        myRankLevel = net.ReadUInt(8)
     end)
 
     playerList.OnRowRightClick = function(_, _, line)
         if not line._steamId then return end
         local menu = DermaMenu()
-        local newState = not line._sharingAllowed
-        menu:AddOption(newState and "Enable Sharing" or "Disable Sharing", function()
-            CKB.SendAdminToggleSharing(line._steamId, newState)
-            timer.Simple(0.3, function() CKB.SendAdminGetPlayers() end)
-        end):SetIcon(newState and "icon16/accept.png" or "icon16/cancel.png")
+
+        -- Only show sharing toggle for strictly lower-rank players
+        if line._rankLevel < myRankLevel then
+            local newState = not line._sharingAllowed
+            menu:AddOption(newState and "Enable Sharing" or "Disable Sharing", function()
+                CKB.SendAdminToggleSharing(line._steamId, newState)
+                timer.Simple(0.3, function() CKB.SendAdminGetPlayers() end)
+            end):SetIcon(newState and "icon16/accept.png" or "icon16/cancel.png")
+        end
+
         menu:Open()
     end
 
