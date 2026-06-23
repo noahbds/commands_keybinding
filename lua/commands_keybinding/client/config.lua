@@ -1,16 +1,11 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Global namespace & shared state
--- ═══════════════════════════════════════════════════════
-
 CKB = CKB or {}
 
 CKB.KeyBinds = CKB.KeyBinds or {}
+CKB.ActiveKeyMap = CKB.ActiveKeyMap or {}
 CKB.KeyPressStates = CKB.KeyPressStates or {}
 CKB.Frame = nil
 CKB.TypingInTextEntry = false
 CKB.MAX_SUGGESTIONS = 20
-
--- Profile state (populated by net)
 CKB.ActiveProfile = nil
 CKB.Profiles = {}
 

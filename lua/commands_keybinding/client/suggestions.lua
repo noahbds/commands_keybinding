@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Command suggestions (autocomplete)
--- ═══════════════════════════════════════════════════════
-
 local THEME = CKB.THEME
 local mergedCommands
 
@@ -126,13 +122,13 @@ function CKB.ShowSuggestions(parent, cmdEntry, suggestions)
             draw.SimpleText(cmd, "DermaDefault", 10, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             if isBlocked then
-                draw.SimpleText("BLOCKED", "DermaDefault", w - 10, h / 2, THEME.danger, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(CKB.L("blocked"), "DermaDefault", w - 10, h / 2, THEME.danger, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             end
         end
 
         btn.DoClick = function()
             if isBlocked then
-                CKB.ShowError("This command is blocked.")
+                CKB.ShowError(CKB.L("command_blocked"))
                 cmdEntry:SetText("")
             else
                 cmdEntry:SetText(cmd)

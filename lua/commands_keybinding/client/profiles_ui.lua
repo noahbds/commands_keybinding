@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Profile selector UI (embedded in main menu)
--- ═══════════════════════════════════════════════════════
-
 local THEME = CKB.THEME
 
 -- ── Create profile bar (docked into parent) ───────────
@@ -22,7 +18,7 @@ function CKB.CreateProfileBar(parent)
     local label = vgui.Create("DLabel", bar)
     label:Dock(LEFT)
     label:SetWide(50)
-    label:SetText("Profile:")
+    label:SetText(CKB.L("profile_label"))
     label:SetFont("DermaDefaultBold")
     label:SetTextColor(THEME.textBright)
 
@@ -55,23 +51,23 @@ function CKB.CreateProfileBar(parent)
     btnNew:SetWide(28)
     btnNew:DockMargin(6, 0, 0, 0)
     btnNew:SetText("+")
-    btnNew:SetTooltip("New profile")
+    btnNew:SetTooltip(CKB.L("tip_new"))
     CKB.StyleButton(btnNew)
 
     local btnClone = vgui.Create("DButton", bar)
     btnClone:Dock(LEFT)
     btnClone:SetWide(50)
     btnClone:DockMargin(4, 0, 0, 0)
-    btnClone:SetText("Clone")
-    btnClone:SetTooltip("Clone current profile")
+    btnClone:SetText(CKB.L("clone"))
+    btnClone:SetTooltip(CKB.L("tip_clone"))
     CKB.StyleButton(btnClone)
 
     local btnRename = vgui.Create("DButton", bar)
     btnRename:Dock(LEFT)
     btnRename:SetWide(60)
     btnRename:DockMargin(4, 0, 0, 0)
-    btnRename:SetText("Rename")
-    btnRename:SetTooltip("Rename current profile")
+    btnRename:SetText(CKB.L("rename"))
+    btnRename:SetTooltip(CKB.L("tip_rename"))
     CKB.StyleButton(btnRename)
 
     local btnDelete = vgui.Create("DButton", bar)
@@ -79,14 +75,14 @@ function CKB.CreateProfileBar(parent)
     btnDelete:SetWide(28)
     btnDelete:DockMargin(4, 0, 0, 0)
     btnDelete:SetText("X")
-    btnDelete:SetTooltip("Delete current profile")
+    btnDelete:SetTooltip(CKB.L("tip_delete"))
 
     local btnShare = vgui.Create("DButton", bar)
     btnShare:Dock(LEFT)
     btnShare:SetWide(50)
     btnShare:DockMargin(4, 0, 0, 0)
-    btnShare:SetText("Share")
-    btnShare:SetTooltip("Share current profile with a player")
+    btnShare:SetText(CKB.L("share"))
+    btnShare:SetTooltip(CKB.L("tip_share"))
     CKB.StyleButton(btnShare)
     btnDelete:SetFont("DermaDefaultBold")
     btnDelete:SetTextColor(THEME.danger)
@@ -108,6 +104,32 @@ function CKB.CreateProfileBar(parent)
         draw.RoundedBox(4, 0, 0, w, h, bg)
     end
 
+    -- ── Language selector (docked right) ──────────────
+
+    local langCombo = vgui.Create("DComboBox", bar)
+    langCombo:Dock(RIGHT)
+    langCombo:SetWide(100)
+    langCombo:DockMargin(4, 0, 0, 0)
+    langCombo:SetFont("DermaDefault")
+    langCombo:SetTextColor(THEME.textBright)
+    langCombo:SetSortItems(false)
+    langCombo:SetContentAlignment(4)
+    langCombo:SetTextInset(6, 0)
+    langCombo:SetTooltip(CKB.L("language_label"))
+    langCombo.Paint = function(self, w, h)
+        draw.RoundedBox(4, 0, 0, w, h, THEME.border)
+        draw.RoundedBox(4, 1, 1, w - 2, h - 2, THEME.bgInput)
+        draw.SimpleText("\226\150\188", "DermaDefault", w - 14, h / 2, THEME.textDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+
+    for _, code in ipairs(CKB.LangOrder) do
+        langCombo:AddChoice(CKB.LangNames[code] or code, code, code == CKB.CurrentLang)
+    end
+
+    langCombo.OnSelect = function(_, _, _, code)
+        CKB.SetLanguage(code)
+    end
+
     -- ── Refresh dropdown ──────────────────────────────
 
     local function refreshDropdown()
@@ -127,7 +149,7 @@ function CKB.CreateProfileBar(parent)
     -- ── Button actions ────────────────────────────────
 
     btnNew.DoClick = function()
-        CKB.OpenProfileNamePopup("New Profile", "", function(name)
+        CKB.OpenProfileNamePopup(CKB.L("new_profile_title"), "", function(name)
             CKB.SendProfileCreate(name)
         end)
     end
@@ -135,7 +157,7 @@ function CKB.CreateProfileBar(parent)
     btnClone.DoClick = function()
         if not CKB.ActiveProfile then return end
         local currentName = CKB.Profiles[CKB.ActiveProfile] or "Profile"
-        CKB.OpenProfileNamePopup("Clone Profile", currentName .. " (Copy)", function(name)
+        CKB.OpenProfileNamePopup(CKB.L("clone_profile_title"), currentName .. CKB.L("copy_suffix"), function(name)
             CKB.SendProfileCreate(name, CKB.ActiveProfile)
         end)
     end
@@ -143,7 +165,7 @@ function CKB.CreateProfileBar(parent)
     btnRename.DoClick = function()
         if not CKB.ActiveProfile then return end
         local currentName = CKB.Profiles[CKB.ActiveProfile] or ""
-        CKB.OpenProfileNamePopup("Rename Profile", currentName, function(name)
+        CKB.OpenProfileNamePopup(CKB.L("rename_profile_title"), currentName, function(name)
             CKB.SendProfileRename(CKB.ActiveProfile, name)
         end)
     end
@@ -191,7 +213,7 @@ function CKB.OpenProfileNamePopup(title, defaultText, onConfirm)
     local nameEntry = vgui.Create("DTextEntry", container)
     nameEntry:Dock(TOP)
     nameEntry:SetTall(28)
-    nameEntry:SetPlaceholderText("Profile name...")
+    nameEntry:SetPlaceholderText(CKB.L("profile_name_ph"))
     nameEntry:SetText(defaultText or "")
     CKB.StyleTextEntry(nameEntry)
 
@@ -203,7 +225,7 @@ function CKB.OpenProfileNamePopup(title, defaultText, onConfirm)
     local btnCancel = vgui.Create("DButton", btnRow)
     btnCancel:Dock(RIGHT)
     btnCancel:SetWide(80)
-    btnCancel:SetText("Cancel")
+    btnCancel:SetText(CKB.L("cancel"))
     CKB.StyleButton(btnCancel)
     btnCancel.DoClick = function() popup:Close() end
 
@@ -211,7 +233,7 @@ function CKB.OpenProfileNamePopup(title, defaultText, onConfirm)
     btnOk:Dock(RIGHT)
     btnOk:DockMargin(0, 0, 6, 0)
     btnOk:SetWide(80)
-    btnOk:SetText("OK")
+    btnOk:SetText(CKB.L("ok"))
     CKB.StyleButton(btnOk, true)
 
     btnOk.DoClick = function()
@@ -244,7 +266,7 @@ function CKB.OpenProfileConfirmDelete(profileName, onConfirm)
     popup:Center()
     popup:MakePopup()
     popup:SetDeleteOnClose(true)
-    CKB.StyleFrame(popup, "Delete Profile")
+    CKB.StyleFrame(popup, CKB.L("delete_profile_title"))
 
     local container = vgui.Create("DPanel", popup)
     container:Dock(FILL)
@@ -260,7 +282,7 @@ function CKB.OpenProfileConfirmDelete(profileName, onConfirm)
     msg:SetWrap(true)
     msg:SetFont("DermaDefault")
     msg:SetTextColor(THEME.textBright)
-    msg:SetText('Are you sure you want to delete "' .. profileName .. '"?\nThis action cannot be undone.')
+    msg:SetText(CKB.L("confirm_delete", profileName))
 
     local btnRow = vgui.Create("DPanel", container)
     btnRow:Dock(TOP)
@@ -271,7 +293,7 @@ function CKB.OpenProfileConfirmDelete(profileName, onConfirm)
     local btnCancel = vgui.Create("DButton", btnRow)
     btnCancel:Dock(RIGHT)
     btnCancel:SetWide(80)
-    btnCancel:SetText("Cancel")
+    btnCancel:SetText(CKB.L("cancel"))
     CKB.StyleButton(btnCancel)
     btnCancel.DoClick = function() popup:Close() end
 
@@ -279,7 +301,7 @@ function CKB.OpenProfileConfirmDelete(profileName, onConfirm)
     btnDel:Dock(RIGHT)
     btnDel:DockMargin(0, 0, 6, 0)
     btnDel:SetWide(100)
-    btnDel:SetText("Delete")
+    btnDel:SetText(CKB.L("delete"))
     btnDel:SetFont("DermaDefaultBold")
     btnDel:SetTextColor(THEME.textBright)
     btnDel.Paint = function(self, w, h)

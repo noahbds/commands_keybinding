@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Server: admin features
--- ═══════════════════════════════════════════════════════
-
 -- ── Request online players with profile summaries ─────
 
 net.Receive("CKB_AdminGetPlayers", function(len, ply)
@@ -89,37 +85,41 @@ net.Receive("CKB_AdminUpdateBind", function(len, ply)
     local command = net.ReadString()
     local key = net.ReadInt(32)
     local argument = net.ReadString()
+    local oldCommand = net.ReadString()
 
     local target = player.GetBySteamID64(targetSteamId)
     if not IsValid(target) then return end
 
     if not CKB_SV.IsValidCommandStr(command) then return end
-    local cleanCmd = string.gsub(command, "%d*$", ""):lower()
-    if CKB_SV.IsConCommandBlocked(cleanCmd) then return end
+    if CKB_SV.IsConCommandBlocked(command) then return end
 
     local data = CKB_SV.LoadPlayerData(target)
     if not data.profiles[profileId] then return end
 
     local binds = data.profiles[profileId].binds
 
+    if oldCommand ~= "" and oldCommand ~= command then
+        binds[oldCommand] = nil
+    end
+
     if key == 0 then
         binds[command] = nil
     else
+        for cmd, bind in pairs(binds) do
+            if cmd ~= command and bind.key == key then
+                binds[cmd] = nil
+            end
+        end
         if not binds[command] and table.Count(binds) >= CKB_SV.MAX_KEYBINDS then return end
         binds[command] = { key = key, argument = argument or "" }
     end
 
     CKB_SV.SavePlayerData(target, data)
 
-    -- If modifying target's active profile, refresh their client
     if data.activeProfile == profileId then
         CKB_SV.SendKeyBindsToPlayer(target, binds)
     end
 
-    -- Resend updated data back to admin
-    CKB_SV.SendKeyBindsToPlayer(target, data.profiles[data.activeProfile].binds)
-
-    -- Re-send the binds data to the admin who made the change
     net.Start("CKB_AdminBindsData")
     net.WriteString(targetSteamId)
     net.WriteString(target:Nick())
@@ -155,8 +155,6 @@ net.Receive("CKB_AdminToggleSharing", function(len, ply)
 
     local target = player.GetBySteamID64(targetSteamId)
     if not IsValid(target) then return end
-
-    -- Hierarchy: can only toggle sharing for players of strictly lower rank
     if CKB_SV.GetRankLevel(target) >= CKB_SV.GetRankLevel(ply) then return end
 
     local data = CKB_SV.LoadPlayerData(target)

@@ -1,10 +1,6 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Main config menu UI
--- ═══════════════════════════════════════════════════════
-
 local THEME = CKB.THEME
 
-local function openConfigMenu()
+function CKB.OpenConfigMenu()
     if IsValid(CKB.Frame) then
         CKB.Frame:MakePopup()
         return
@@ -19,7 +15,7 @@ local function openConfigMenu()
     frame:SetMinWidth(500)
     frame:SetMinHeight(400)
     frame:SetDeleteOnClose(true)
-    CKB.StyleFrame(frame, "Commands Key Binding")
+    CKB.StyleFrame(frame, CKB.L("title"))
 
     frame.OnClose = function()
         CKB.CloseSuggestions()
@@ -43,7 +39,7 @@ local function openConfigMenu()
         adminBtn:Dock(TOP)
         adminBtn:SetTall(28)
         adminBtn:DockMargin(8, 4, 8, 0)
-        adminBtn:SetText("Admin Panel — View/Edit Player Keybinds")
+        adminBtn:SetText(CKB.L("admin_button"))
         CKB.StyleButton(adminBtn)
         adminBtn.DoClick = function()
             CKB.OpenAdminPanel()
@@ -104,12 +100,12 @@ local function openConfigMenu()
     local cmdLabel = vgui.Create("DLabel", cmdRow)
     cmdLabel:Dock(LEFT)
     cmdLabel:SetWide(80)
-    cmdLabel:SetText("Command:")
+    cmdLabel:SetText(CKB.L("command_label"))
     CKB.StyleLabel(cmdLabel)
 
     local commandEntry = vgui.Create("DTextEntry", cmdRow)
     commandEntry:Dock(FILL)
-    commandEntry:SetPlaceholderText("Type a command...")
+    commandEntry:SetPlaceholderText(CKB.L("command_placeholder"))
     CKB.StyleTextEntry(commandEntry)
 
     -- Argument row
@@ -122,12 +118,12 @@ local function openConfigMenu()
     local argLabel = vgui.Create("DLabel", argRow)
     argLabel:Dock(LEFT)
     argLabel:SetWide(80)
-    argLabel:SetText("Argument:")
+    argLabel:SetText(CKB.L("argument_label"))
     CKB.StyleLabel(argLabel)
 
     local argumentEntry = vgui.Create("DTextEntry", argRow)
     argumentEntry:Dock(FILL)
-    argumentEntry:SetPlaceholderText("Optional argument...")
+    argumentEntry:SetPlaceholderText(CKB.L("argument_placeholder"))
     CKB.StyleTextEntry(argumentEntry)
 
     -- Key binder row
@@ -140,7 +136,7 @@ local function openConfigMenu()
     local keyLabel = vgui.Create("DLabel", keyRow)
     keyLabel:Dock(LEFT)
     keyLabel:SetWide(80)
-    keyLabel:SetText("Key Bind:")
+    keyLabel:SetText(CKB.L("keybind_label"))
     CKB.StyleLabel(keyLabel)
 
     local keyBinder = vgui.Create("DBinder", keyRow)
@@ -152,7 +148,7 @@ local function openConfigMenu()
     saveButton:Dock(TOP)
     saveButton:SetTall(32)
     saveButton:DockMargin(100, 4, 100, 0)
-    saveButton:SetText("Save Key Bind")
+    saveButton:SetText(CKB.L("save_keybind"))
     saveButton:SetEnabled(false)
     CKB.StyleButton(saveButton, true)
 
@@ -179,12 +175,12 @@ local function openConfigMenu()
         end
 
         if not CKB.IsValidCommand(cmd) then
-            setStatus("Invalid: Only alphanumeric, +, -, _, *, /, ! and spaces allowed.")
+            setStatus(CKB.L("invalid_chars"))
             return
         end
 
         if CKB.IsConCommandBlocked(cmd) then
-            setStatus("This command is blocked.")
+            setStatus(CKB.L("command_blocked"))
             self:SetText("")
             saveButton:SetEnabled(false)
             return
@@ -215,43 +211,36 @@ local function openConfigMenu()
         local argument = argumentEntry:GetValue()
 
         if not CKB.IsValidCommand(cmd) then
-            setStatus("Please enter a valid command.")
+            setStatus(CKB.L("enter_valid_command"))
             return
         end
         if CKB.IsConCommandBlocked(cmd) then
-            setStatus("This command is blocked.")
+            setStatus(CKB.L("command_blocked"))
             return
         end
         if not key or key == 0 then
-            setStatus("Please select a key.")
+            setStatus(CKB.L("select_key"))
             return
         end
 
         local warnings = {}
-        local existingConflict = nil
 
         for existingCmd, data in pairs(CKB.KeyBinds) do
             if data.key == key and existingCmd ~= cmd then
-                existingConflict = existingCmd
-                table.insert(warnings, 'The key "' .. input.GetKeyName(key) .. '" is already bound to "' .. existingCmd .. '" in the Keybind Manager. It will be overwritten.')
+                table.insert(warnings, CKB.L("warn_overwrite", input.GetKeyName(key), existingCmd))
                 break
             end
         end
 
         local engineBind = CKB.GetEngineBind(key)
         if engineBind then
-            table.insert(warnings, 'The key "' .. input.GetKeyName(key) .. '" is already bound to "' .. engineBind .. '" in Garry\'s Mod. The engine bind will take priority over the Keybind Manager binding, causing the command not to work while the engine bind is active. It is recommended to choose a different key.')
+            table.insert(warnings, CKB.L("warn_engine", input.GetKeyName(key), engineBind))
         end
 
         local function doSave()
-            if existingConflict then
-                CKB.SendUpdate(existingConflict, 0, "")
-                timer.Simple(0.25, function()
-                    CKB.SendUpdate(cmd, key, argument)
-                end)
-            else
-                CKB.SendUpdate(cmd, key, argument)
-            end
+            -- The server clears any other command bound to this key, so a
+            -- single message is enough even when overwriting a conflict.
+            CKB.SendUpdate(cmd, key, argument)
             commandEntry:SetText("")
             argumentEntry:SetText("")
             keyBinder:SetValue(0)
@@ -279,7 +268,7 @@ local function openConfigMenu()
     searchEntry:Dock(TOP)
     searchEntry:SetTall(26)
     searchEntry:DockMargin(0, 0, 0, 6)
-    searchEntry:SetPlaceholderText("Search keybinds...")
+    searchEntry:SetPlaceholderText(CKB.L("search_placeholder"))
     CKB.StyleTextEntry(searchEntry)
 
     -- List
@@ -287,9 +276,9 @@ local function openConfigMenu()
     listView:Dock(FILL)
     listView:SetMultiSelect(false)
     CKB.StyleListView(listView)
-    listView:AddColumn("Command"):SetFixedWidth(200)
-    listView:AddColumn("Argument"):SetFixedWidth(150)
-    listView:AddColumn("Key")
+    listView:AddColumn(CKB.L("col_command")):SetFixedWidth(200)
+    listView:AddColumn(CKB.L("col_argument")):SetFixedWidth(150)
+    listView:AddColumn(CKB.L("col_key"))
 
     -- ── Refresh function ──────────────────────────────
 
@@ -299,7 +288,7 @@ local function openConfigMenu()
 
         for command, data in SortedPairs(CKB.KeyBinds) do
             if type(data) == "table" then
-                local displayCommand = string.gsub(command, "%d*$", "")
+                local displayCommand = command
                 local keyName = input.GetKeyName(data.key) or "?"
                 local argument = data.argument or ""
 
@@ -325,11 +314,11 @@ local function openConfigMenu()
 
     listView.OnRowRightClick = function(_, _, line)
         local menu = DermaMenu()
-        menu:AddOption("Edit", function()
+        menu:AddOption(CKB.L("edit"), function()
             CKB.OpenEditPopup(line._ckbKey, line._ckbCommand, line._ckbArgument)
         end):SetIcon("icon16/pencil.png")
         menu:AddSpacer()
-        menu:AddOption("Delete", function()
+        menu:AddOption(CKB.L("delete"), function()
             CKB.SendUpdate(line._ckbCommand, 0, "")
         end):SetIcon("icon16/cross.png")
         menu:Open()
@@ -342,4 +331,4 @@ local function openConfigMenu()
     frame:RefreshList()
 end
 
-concommand.Add("open_commands_keybinding", openConfigMenu)
+concommand.Add("open_commands_keybinding", CKB.OpenConfigMenu)

@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Theme colors & styled element factories
--- ═══════════════════════════════════════════════════════
-
 CKB.THEME = {
     bg          = Color(22, 22, 30),
     bgLight     = Color(32, 32, 42),
@@ -115,10 +111,10 @@ function CKB.StyleBinder(binder)
         draw.RoundedBox(4, 0, 0, w, h, col)
         draw.RoundedBox(4, 1, 1, w - 2, h - 2, THEME.bgInput)
 
-        local keyName = self:GetValue() ~= 0 and input.GetKeyName(self:GetValue()) or "Click to bind..."
+        local keyName = self:GetValue() ~= 0 and input.GetKeyName(self:GetValue()) or CKB.L("click_to_bind")
         local textCol = self:GetValue() ~= 0 and THEME.text or THEME.textDim
         if focused then
-            keyName = "Press a key..."
+            keyName = CKB.L("press_key")
             textCol = THEME.accentHover
         end
         draw.SimpleText(string.upper(keyName), "DermaDefaultBold", w / 2, h / 2, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)

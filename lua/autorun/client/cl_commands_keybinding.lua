@@ -1,7 +1,7 @@
 if SERVER then return end
 
--- Commands Key Binding - Client loader
 include("commands_keybinding/client/config.lua")
+include("commands_keybinding/client/lang.lua")
 include("commands_keybinding/client/theme.lua")
 include("commands_keybinding/client/blocked.lua")
 include("commands_keybinding/client/allcommands.lua")

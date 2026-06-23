@@ -1,14 +1,10 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Server: data persistence & profile storage
--- ═══════════════════════════════════════════════════════
-
 CKB_SV = CKB_SV or {}
 
 CKB_SV.MAX_KEYBINDS = 50
 CKB_SV.RATE_LIMIT = 0.2
 CKB_SV.DIR = "commands_keybinding"
-
 CKB_SV.PlayerRateLimits = {}
+CKB_SV.Cache = CKB_SV.Cache or {}
 
 -- ── Blocked commands (shared with client) ─────────────
 
@@ -21,20 +17,29 @@ local blockedCommands = {
     ["exec"] = true, ["alias"] = true, ["sv_allowcslua"] = true,
     ["lua_run"] = true, ["lua_run_cl"] = true, ["lua_openscript"] = true, ["lua_openscript_cl"] = true,
 }
-
 function CKB_SV.IsConCommandBlocked(cmd)
-    return blockedCommands[string.lower(cmd)] or false
+    local token = string.match(cmd or "", "^%s*(%S+)")
+    if not token then return false end
+    return blockedCommands[string.lower(token)] or false
 end
 
--- ── Player file path ──────────────────────────────────
+-- ── Player identity / file path ───────────────────────
+
+function CKB_SV.GetPlayerKey(ply)
+    return ply:SteamID64() or ("ent_" .. ply:EntIndex())
+end
 
 function CKB_SV.GetPlayerFile(ply)
-    return CKB_SV.DIR .. "/" .. ply:SteamID64() .. ".json"
+    return CKB_SV.DIR .. "/" .. CKB_SV.GetPlayerKey(ply) .. ".json"
 end
 
 -- ── Load / save raw data ──────────────────────────────
 
 function CKB_SV.LoadPlayerData(ply)
+    local cacheKey = CKB_SV.GetPlayerKey(ply)
+    local cached = CKB_SV.Cache[cacheKey]
+    if cached then return cached end
+
     local path = CKB_SV.GetPlayerFile(ply)
     if file.Exists(path, "DATA") then
         local raw = file.Read(path, "DATA")
@@ -54,6 +59,7 @@ function CKB_SV.LoadPlayerData(ply)
                 }
                 CKB_SV.SavePlayerData(ply, tbl)
             end
+            CKB_SV.Cache[cacheKey] = tbl
             return tbl
         end
     end
@@ -74,8 +80,13 @@ function CKB_SV.LoadPlayerData(ply)
 end
 
 function CKB_SV.SavePlayerData(ply, data)
+    CKB_SV.Cache[CKB_SV.GetPlayerKey(ply)] = data
     file.CreateDir(CKB_SV.DIR)
     file.Write(CKB_SV.GetPlayerFile(ply), util.TableToJSON(data, true))
+end
+
+function CKB_SV.ClearCache(ply)
+    CKB_SV.Cache[CKB_SV.GetPlayerKey(ply)] = nil
 end
 
 -- ── Profile helpers ───────────────────────────────────

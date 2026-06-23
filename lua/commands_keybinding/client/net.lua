@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Net: receive keybinds & profiles from server
--- ═══════════════════════════════════════════════════════
-
 -- ── Receive active keybinds ───────────────────────────
 
 net.Receive("CKB_Config", function()
@@ -13,6 +9,7 @@ net.Receive("CKB_Config", function()
         local argument = net.ReadString()
         CKB.KeyBinds[command] = { key = key, argument = argument }
     end
+    if CKB.RebuildKeyMap then CKB.RebuildKeyMap() end
     if IsValid(CKB.Frame) and CKB.Frame.RefreshList then
         CKB.Frame:RefreshList()
     end
@@ -36,11 +33,12 @@ end)
 
 -- ── Send keybind update to server ─────────────────────
 
-function CKB.SendUpdate(command, key, argument)
+function CKB.SendUpdate(command, key, argument, oldCommand)
     net.Start("CKB_Update")
     net.WriteString(command)
     net.WriteInt(key, 32)
     net.WriteString(argument or "")
+    net.WriteString(oldCommand or "")
     net.SendToServer()
 end
 

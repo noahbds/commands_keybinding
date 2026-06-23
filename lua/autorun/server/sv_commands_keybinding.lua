@@ -22,6 +22,7 @@ util.AddNetworkString("CKB_AdminToggleSharing")
 
 -- Add client files
 AddCSLuaFile("commands_keybinding/client/config.lua")
+AddCSLuaFile("commands_keybinding/client/lang.lua")
 AddCSLuaFile("commands_keybinding/client/theme.lua")
 AddCSLuaFile("commands_keybinding/client/blocked.lua")
 AddCSLuaFile("commands_keybinding/client/allcommands.lua")

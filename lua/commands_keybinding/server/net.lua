@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Server: net handlers, player lifecycle
--- ═══════════════════════════════════════════════════════
-
 -- ── Send keybinds to a player ─────────────────────────
 
 function CKB_SV.SendKeyBindsToPlayer(ply, keyBinds)
@@ -22,9 +18,7 @@ function CKB_SV.SendProfileList(ply)
     local data = CKB_SV.LoadPlayerData(ply)
     net.Start("CKB_ProfileList")
     net.WriteString(data.activeProfile or "")
-    local count = 0
-    for _ in pairs(data.profiles) do count = count + 1 end
-    net.WriteUInt(count, 16)
+    net.WriteUInt(table.Count(data.profiles), 16)
     for id, profile in pairs(data.profiles) do
         net.WriteString(id)
         net.WriteString(profile.name or "Unnamed")
@@ -41,17 +35,25 @@ net.Receive("CKB_Update", function(len, ply)
     local command = net.ReadString()
     local key = net.ReadInt(32)
     local argument = net.ReadString()
+    local oldCommand = net.ReadString()
 
     if not CKB_SV.IsValidCommandStr(command) then return end
-
-    local cleanCmd = string.gsub(command, "%d*$", ""):lower()
-    if CKB_SV.IsConCommandBlocked(cleanCmd) then return end
+    if CKB_SV.IsConCommandBlocked(command) then return end
 
     local keyBinds = CKB_SV.GetActiveBinds(ply)
+
+    if oldCommand ~= "" and oldCommand ~= command then
+        keyBinds[oldCommand] = nil
+    end
 
     if key == 0 then
         keyBinds[command] = nil
     else
+        for cmd, data in pairs(keyBinds) do
+            if cmd ~= command and data.key == key then
+                keyBinds[cmd] = nil
+            end
+        end
         if not keyBinds[command] and table.Count(keyBinds) >= CKB_SV.MAX_KEYBINDS then return end
         keyBinds[command] = { key = key, argument = argument or "" }
     end
@@ -118,9 +120,7 @@ net.Receive("CKB_ProfileDelete", function(len, ply)
     if not data.profiles[profileId] then return end
 
     -- Cannot delete the last profile
-    local count = 0
-    for _ in pairs(data.profiles) do count = count + 1 end
-    if count <= 1 then return end
+    if table.Count(data.profiles) <= 1 then return end
 
     data.profiles[profileId] = nil
 
@@ -169,4 +169,5 @@ end)
 
 hook.Add("PlayerDisconnected", "CKB_Cleanup", function(ply)
     CKB_SV.PlayerRateLimits[ply] = nil
+    CKB_SV.ClearCache(ply)
 end)

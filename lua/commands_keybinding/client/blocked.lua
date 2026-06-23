@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Blocked commands & engine bind detection
--- ═══════════════════════════════════════════════════════
-
 local blockedCommands = {
     ["quit"] = true, ["exit"] = true, ["killserver"] = true,
     ["rcon"] = true, ["rcon_password"] = true, ["sv_password"] = true,
@@ -13,7 +9,9 @@ local blockedCommands = {
 }
 
 function CKB.IsConCommandBlocked(cmd)
-    return blockedCommands[string.lower(cmd)] or false
+    local token = string.match(cmd or "", "^%s*(%S+)")
+    if not token then return false end
+    return blockedCommands[string.lower(token)] or false
 end
 
 -- ── Engine bind detection ─────────────────────────────

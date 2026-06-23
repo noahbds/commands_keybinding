@@ -1,13 +1,9 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Popup dialogs (error, warning, edit)
--- ═══════════════════════════════════════════════════════
-
 local THEME = CKB.THEME
 
 -- ── Error popup ───────────────────────────────────────
 
 function CKB.ShowError(message)
-    Derma_Message(message, "Commands Key Binding — Error", "OK")
+    Derma_Message(message, CKB.L("error_title"), CKB.L("ok"))
     surface.PlaySound("common/warning.wav")
 end
 
@@ -39,7 +35,7 @@ function CKB.ShowSaveConfirmation(warnings, onConfirm)
         surface.SetDrawColor(THEME.danger)
         surface.DrawRect(0, 32, w, 2)
         draw.SimpleText("\226\154\160", "DermaLarge", 12, 16, Color(255, 220, 60), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("WARNING", "DermaDefaultBold", 36, 16, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(CKB.L("warning"), "DermaDefaultBold", 36, 16, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     local content = vgui.Create("DPanel", popup)
@@ -66,7 +62,7 @@ function CKB.ShowSaveConfirmation(warnings, onConfirm)
     continueLabel:DockMargin(12, 8, 12, 0)
     continueLabel:SetFont("DermaDefaultBold")
     continueLabel:SetTextColor(THEME.text)
-    continueLabel:SetText("Are you sure you want to continue?")
+    continueLabel:SetText(CKB.L("confirm_continue"))
     continueLabel:SizeToContents()
 
     local btnPanel = vgui.Create("DPanel", popup)
@@ -78,7 +74,7 @@ function CKB.ShowSaveConfirmation(warnings, onConfirm)
     local btnNo = vgui.Create("DButton", btnPanel)
     btnNo:Dock(RIGHT)
     btnNo:SetWide(100)
-    btnNo:SetText("Cancel")
+    btnNo:SetText(CKB.L("cancel"))
     btnNo:SetFont("DermaDefaultBold")
     btnNo:SetTextColor(THEME.textBright)
     btnNo.Paint = function(self, w, h)
@@ -96,7 +92,7 @@ function CKB.ShowSaveConfirmation(warnings, onConfirm)
     btnYes:Dock(RIGHT)
     btnYes:DockMargin(0, 0, 6, 0)
     btnYes:SetWide(130)
-    btnYes:SetText("Continue Anyway")
+    btnYes:SetText(CKB.L("continue_anyway"))
     btnYes:SetFont("DermaDefaultBold")
     btnYes:SetTextColor(THEME.textBright)
     btnYes.Paint = function(self, w, h)
@@ -132,7 +128,7 @@ function CKB.OpenEditPopup(existingKey, existingCommand, existingArgument)
     editFrame:Center()
     editFrame:MakePopup()
     editFrame:SetDeleteOnClose(true)
-    CKB.StyleFrame(editFrame, "Edit Key Bind")
+    CKB.StyleFrame(editFrame, CKB.L("edit_keybind_title"))
 
     local container = vgui.Create("DPanel", editFrame)
     container:Dock(FILL)
@@ -152,12 +148,12 @@ function CKB.OpenEditPopup(existingKey, existingCommand, existingArgument)
     local cmdLabel = vgui.Create("DLabel", cmdRow)
     cmdLabel:Dock(LEFT)
     cmdLabel:SetWide(80)
-    cmdLabel:SetText("Command:")
+    cmdLabel:SetText(CKB.L("command_label"))
     CKB.StyleLabel(cmdLabel)
 
     local cmdEntry = vgui.Create("DTextEntry", cmdRow)
     cmdEntry:Dock(FILL)
-    cmdEntry:SetText(string.gsub(existingCommand, "%d*$", ""))
+    cmdEntry:SetText(existingCommand)
     CKB.StyleTextEntry(cmdEntry)
 
     -- Argument row
@@ -170,7 +166,7 @@ function CKB.OpenEditPopup(existingKey, existingCommand, existingArgument)
     local argLabel = vgui.Create("DLabel", argRow)
     argLabel:Dock(LEFT)
     argLabel:SetWide(80)
-    argLabel:SetText("Argument:")
+    argLabel:SetText(CKB.L("argument_label"))
     CKB.StyleLabel(argLabel)
 
     local argEntry = vgui.Create("DTextEntry", argRow)
@@ -188,7 +184,7 @@ function CKB.OpenEditPopup(existingKey, existingCommand, existingArgument)
     local keyLabel = vgui.Create("DLabel", keyRow)
     keyLabel:Dock(LEFT)
     keyLabel:SetWide(80)
-    keyLabel:SetText("Key Bind:")
+    keyLabel:SetText(CKB.L("keybind_label"))
     CKB.StyleLabel(keyLabel)
 
     local keyBinder = vgui.Create("DBinder", keyRow)
@@ -201,7 +197,7 @@ function CKB.OpenEditPopup(existingKey, existingCommand, existingArgument)
     saveBtn:Dock(TOP)
     saveBtn:SetTall(34)
     saveBtn:DockMargin(60, 10, 60, 0)
-    saveBtn:SetText("Save Changes")
+    saveBtn:SetText(CKB.L("save_changes"))
     CKB.StyleButton(saveBtn, true)
 
     saveBtn.DoClick = function()
@@ -210,26 +206,20 @@ function CKB.OpenEditPopup(existingKey, existingCommand, existingArgument)
         local newKey = keyBinder:GetValue()
 
         if not CKB.IsValidCommand(cmd) then
-            CKB.ShowError("Invalid command.")
+            CKB.ShowError(CKB.L("invalid_command"))
             return
         end
         if CKB.IsConCommandBlocked(cmd) then
-            CKB.ShowError("This command is blocked.")
+            CKB.ShowError(CKB.L("command_blocked"))
             return
         end
         if not newKey or newKey == 0 then
-            CKB.ShowError("Please select a key.")
+            CKB.ShowError(CKB.L("select_key"))
             return
         end
-
-        if existingCommand == cmd then
-            CKB.SendUpdate(cmd, newKey, arg)
-        else
-            CKB.SendUpdate(existingCommand, 0, "")
-            timer.Simple(0.25, function()
-                CKB.SendUpdate(cmd, newKey, arg)
-            end)
-        end
+        
+        local oldCommand = (existingCommand ~= cmd) and existingCommand or nil
+        CKB.SendUpdate(cmd, newKey, arg, oldCommand)
         editFrame:Close()
     end
 end

@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Server: profile sharing
--- ═══════════════════════════════════════════════════════
-
 CKB_SV.PendingShares = CKB_SV.PendingShares or {}
 
 CreateConVar("ckb_allow_player_sharing", "0", FCVAR_ARCHIVE + FCVAR_NOTIFY, "Allow non-admin players to share profiles (0 = admin only, 1 = everyone)", 0, 1)
@@ -42,7 +38,7 @@ net.Receive("CKB_ShareProfile", function(len, ply)
         net.Start("CKB_ShareResult")
         net.WriteString("")
         net.WriteBool(false)
-        net.WriteString("You are not allowed to share profiles.")
+        net.WriteString("share_not_allowed")
         net.Send(ply)
         return
     end

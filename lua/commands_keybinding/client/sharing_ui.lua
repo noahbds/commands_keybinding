@@ -1,7 +1,3 @@
--- ═══════════════════════════════════════════════════════
---  CKB — Client: profile sharing UI
--- ═══════════════════════════════════════════════════════
-
 local THEME = CKB.THEME
 
 -- ── Send share request ────────────────────────────────
@@ -33,7 +29,7 @@ function CKB.OpenSharePlayerPicker(profileId)
     popup:Center()
     popup:MakePopup()
     popup:SetDeleteOnClose(true)
-    CKB.StyleFrame(popup, "Share Profile — Select Player")
+    CKB.StyleFrame(popup, CKB.L("share_picker_title"))
 
     local container = vgui.Create("DPanel", popup)
     container:Dock(FILL)
@@ -47,8 +43,8 @@ function CKB.OpenSharePlayerPicker(profileId)
     listView:Dock(FILL)
     listView:SetMultiSelect(false)
     CKB.StyleListView(listView)
-    listView:AddColumn("Player"):SetFixedWidth(180)
-    listView:AddColumn("SteamID")
+    listView:AddColumn(CKB.L("col_player")):SetFixedWidth(180)
+    listView:AddColumn(CKB.L("col_steamid"))
 
     local me = LocalPlayer()
     for _, ply in ipairs(player.GetAll()) do
@@ -62,7 +58,7 @@ function CKB.OpenSharePlayerPicker(profileId)
         if line._steamId then
             CKB.SendShareProfile(profileId, line._steamId)
             popup:Close()
-            chat.AddText(THEME.accent, "[CKB] ", THEME.text, "Share request sent!")
+            chat.AddText(THEME.accent, CKB.L("chat_prefix"), THEME.text, CKB.L("share_sent"))
         end
     end
 
@@ -75,7 +71,7 @@ function CKB.OpenSharePlayerPicker(profileId)
     local btnCancel = vgui.Create("DButton", btnRow)
     btnCancel:Dock(RIGHT)
     btnCancel:SetWide(80)
-    btnCancel:SetText("Cancel")
+    btnCancel:SetText(CKB.L("cancel"))
     CKB.StyleButton(btnCancel)
     btnCancel.DoClick = function() popup:Close() end
 
@@ -83,14 +79,14 @@ function CKB.OpenSharePlayerPicker(profileId)
     btnSend:Dock(RIGHT)
     btnSend:DockMargin(0, 0, 6, 0)
     btnSend:SetWide(80)
-    btnSend:SetText("Share")
+    btnSend:SetText(CKB.L("share"))
     CKB.StyleButton(btnSend, true)
     btnSend.DoClick = function()
         local _, line = listView:GetSelectedLine()
         if line and line._steamId then
             CKB.SendShareProfile(profileId, line._steamId)
             popup:Close()
-            chat.AddText(THEME.accent, "[CKB] ", THEME.text, "Share request sent!")
+            chat.AddText(THEME.accent, CKB.L("chat_prefix"), THEME.text, CKB.L("share_sent"))
         end
     end
 end
@@ -110,7 +106,7 @@ net.Receive("CKB_ShareIncoming", function()
     popup:Center()
     popup:MakePopup()
     popup:SetDeleteOnClose(true)
-    CKB.StyleFrame(popup, "Incoming Profile Share")
+    CKB.StyleFrame(popup, CKB.L("incoming_share_title"))
 
     local container = vgui.Create("DPanel", popup)
     container:Dock(FILL)
@@ -126,7 +122,7 @@ net.Receive("CKB_ShareIncoming", function()
     msg:SetWrap(true)
     msg:SetFont("DermaDefault")
     msg:SetTextColor(THEME.textBright)
-    msg:SetText(senderName .. ' wants to share their profile "' .. profileName .. '" with you (' .. bindCount .. " keybinds).\n\nIf you accept, it will be added as a new profile.")
+    msg:SetText(CKB.L("share_incoming_msg", senderName, profileName, bindCount))
 
     local btnRow = vgui.Create("DPanel", container)
     btnRow:Dock(BOTTOM)
@@ -136,7 +132,7 @@ net.Receive("CKB_ShareIncoming", function()
     local btnDecline = vgui.Create("DButton", btnRow)
     btnDecline:Dock(RIGHT)
     btnDecline:SetWide(80)
-    btnDecline:SetText("Decline")
+    btnDecline:SetText(CKB.L("decline"))
     CKB.StyleButton(btnDecline)
     btnDecline.DoClick = function()
         CKB.SendShareDecline(senderSteamId)
@@ -147,12 +143,12 @@ net.Receive("CKB_ShareIncoming", function()
     btnAccept:Dock(RIGHT)
     btnAccept:DockMargin(0, 0, 6, 0)
     btnAccept:SetWide(80)
-    btnAccept:SetText("Accept")
+    btnAccept:SetText(CKB.L("accept"))
     CKB.StyleButton(btnAccept, true)
     btnAccept.DoClick = function()
         CKB.SendShareAccept(senderSteamId)
         popup:Close()
-        chat.AddText(THEME.accent, "[CKB] ", THEME.success, "Profile received!")
+        chat.AddText(THEME.accent, CKB.L("chat_prefix"), THEME.success, CKB.L("profile_received"))
     end
 end)
 
@@ -164,10 +160,11 @@ net.Receive("CKB_ShareResult", function()
     local reason = net.ReadString()
 
     if reason and reason ~= "" then
-        chat.AddText(THEME.accent, "[CKB] ", THEME.danger, reason)
+        -- The server sends a translation key (e.g. "share_not_allowed").
+        chat.AddText(THEME.accent, CKB.L("chat_prefix"), THEME.danger, CKB.L(reason))
     elseif accepted then
-        chat.AddText(THEME.accent, "[CKB] ", THEME.success, targetName .. " accepted your shared profile!")
+        chat.AddText(THEME.accent, CKB.L("chat_prefix"), THEME.success, CKB.L("share_accepted", targetName))
     else
-        chat.AddText(THEME.accent, "[CKB] ", THEME.danger, targetName .. " declined your shared profile.")
+        chat.AddText(THEME.accent, CKB.L("chat_prefix"), THEME.danger, CKB.L("share_declined", targetName))
     end
 end)
